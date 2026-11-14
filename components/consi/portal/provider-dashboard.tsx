@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 import useSWR from 'swr'
 import type { Provider, Resource } from '@/lib/types'
@@ -32,6 +33,10 @@ export function ProviderDashboard() {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-2">
+        <Link href="/portal" className="inline-flex min-h-11 w-fit items-center gap-2 rounded-full pr-3 text-base font-medium text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="size-5" aria-hidden="true" />
+          Back to roles
+        </Link>
         <p className="text-base font-medium text-muted-foreground">Provider dashboard</p>
         <h1 className="font-heading text-4xl font-bold text-balance">{data.provider.name}</h1>
         <p className="text-base">

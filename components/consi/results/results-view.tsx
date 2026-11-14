@@ -1,6 +1,6 @@
 'use client'
 
-import { List, Map as MapIcon, SlidersHorizontal } from 'lucide-react'
+import { ArrowLeft, List, Map as MapIcon, SlidersHorizontal } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
@@ -15,7 +15,7 @@ import { FiltersPanel } from './filters-panel'
 import { FollowUpCard } from './follow-up-card'
 import { RecommendationCard } from './recommendation-card'
 
-const ResultsMap = dynamic(() => import('./results-map'), { ssr: false, loading: () => <div className="h-96 animate-pulse rounded-3xl bg-muted" /> })
+const ResultsMap = dynamic(() => import('./results-map'), { ssr: false, loading: () => <div className="h-[min(24rem,52dvh)] animate-pulse rounded-3xl bg-muted" /> })
 
 const postJSON = <T,>(url: string, body: unknown) =>
   fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then(async (r) => {
@@ -82,6 +82,10 @@ export function ResultsView() {
   return (
     <div className="flex flex-col gap-5">
       <header className="flex flex-col gap-3">
+        <Link href="/" className="inline-flex min-h-11 w-fit items-center gap-2 rounded-full pr-3 text-base font-medium text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="size-5" aria-hidden="true" />
+          {t('common.back')}
+        </Link>
         <p className="text-base font-medium text-muted-foreground">{t('results.youAsked')}</p>
         <h1 className="font-heading text-2xl font-semibold leading-snug text-balance">{`“${search.query}”`}</h1>
         {data && <p className="text-lg leading-relaxed text-pretty">{data.interpretation.summary}</p>}

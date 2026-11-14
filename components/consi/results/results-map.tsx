@@ -21,7 +21,7 @@ export default function ResultsMap({
 }) {
   const center = origin ?? (results[0] ? { lat: results[0].resource.location.lat, lng: results[0].resource.location.lng } : { lat: 34.1425, lng: -118.255 })
   return (
-    <MapContainer center={[center.lat, center.lng]} zoom={13} scrollWheelZoom={false} className="h-96 w-full rounded-3xl ring-1 ring-border">
+    <MapContainer center={[center.lat, center.lng]} zoom={13} scrollWheelZoom={false} className="h-[min(24rem,52dvh)] w-full rounded-3xl ring-1 ring-border">
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

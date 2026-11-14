@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import useSWR from 'swr'
 import type { Provider, Resource } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -50,6 +52,10 @@ export function AdminDashboard() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
+        <Link href="/portal" className="inline-flex min-h-11 w-fit items-center gap-2 rounded-full pr-3 text-base font-medium text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="size-5" aria-hidden="true" />
+          Back to roles
+        </Link>
         <h1 className="font-heading text-4xl font-bold">Admin</h1>
         <ul className="flex flex-wrap gap-2" aria-label="Integration status">
           {Object.entries(data.integrations).map(([k, v]) => (

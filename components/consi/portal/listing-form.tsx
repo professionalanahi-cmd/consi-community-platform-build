@@ -1,6 +1,7 @@
 'use client'
 
 import { AlertTriangle } from 'lucide-react'
+import { Pills } from '../pills'
 import { useState } from 'react'
 import { LANGUAGE_META } from '@/lib/i18n'
 import { CATEGORIES, LANGUAGES } from '@/lib/types'
@@ -118,11 +119,16 @@ export function ListingForm({ initial, onDone, onCancel }: { initial: ListingDra
           </div>
         </fieldset>
         <Field flagged={flag('cost')} label="Cost">
-          <select className={input} value={d.cost} onChange={(e) => set('cost', e.target.value as ListingDraft['cost'])}>
-            <option value="free">Free</option>
-            <option value="subsidized">Subsidized / sliding scale</option>
-            <option value="paid">Paid</option>
-          </select>
+          <Pills
+            label="Cost"
+            value={d.cost}
+            onChange={(v) => set('cost', v)}
+            options={[
+              { value: 'free', label: 'Free' },
+              { value: 'subsidized', label: 'Subsidized / sliding scale' },
+              { value: 'paid', label: 'Paid' },
+            ]}
+          />
         </Field>
         <Field flagged={flag('costDetail')} label="Cost detail (optional)">
           <input className={input} value={d.costDetail} onChange={(e) => set('costDetail', e.target.value)} />
@@ -170,12 +176,17 @@ export function ListingForm({ initial, onDone, onCancel }: { initial: ListingDra
           <input className={input} placeholder="Tue & Thu, 5–7 PM" value={d.schedule} onChange={(e) => set('schedule', e.target.value)} />
         </Field>
         <Field flagged={flag('availability')} label="Availability">
-          <select className={input} value={d.availability} onChange={(e) => set('availability', e.target.value as ListingDraft['availability'])}>
-            <option value="open">Open</option>
-            <option value="waitlist">Waitlist</option>
-            <option value="seasonal">Seasonal</option>
-            <option value="closed">Closed</option>
-          </select>
+          <Pills
+            label="Availability"
+            value={d.availability}
+            onChange={(v) => set('availability', v)}
+            options={[
+              { value: 'open', label: 'Open' },
+              { value: 'waitlist', label: 'Waitlist' },
+              { value: 'seasonal', label: 'Seasonal' },
+              { value: 'closed', label: 'Closed' },
+            ]}
+          />
         </Field>
         <div className="grid grid-cols-2 gap-4">
           <Field flagged={flag('startDate')} label="Start date">

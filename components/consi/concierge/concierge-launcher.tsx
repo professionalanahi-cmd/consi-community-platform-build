@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useEffect, useRef } from 'react'
 import useSWR from 'swr'
 import { useApp } from '../app-provider'
@@ -13,6 +13,7 @@ type VoiceSession = { mode: 'demo'; reason?: string } | { mode: 'live'; signedUr
 export function ConciergeLauncher() {
   const { t, lang, conciergeOpen, setConciergeOpen, startSearch, setGuide } = useApp()
   const router = useRouter()
+  const pathname = usePathname()
   const dialogRef = useRef<HTMLDialogElement>(null)
   const { data } = useSWR<VoiceSession>(conciergeOpen ? `voice-session-${lang}` : null, () => fetch(`/api/voice/session?lang=${lang}`).then((r) => r.json()), {
     revalidateOnFocus: false,
@@ -43,7 +44,7 @@ export function ConciergeLauncher() {
 
   return (
     <>
-      {!conciergeOpen && (
+      {!conciergeOpen && pathname !== '/' && (
         <button
           type="button"
           onClick={() => setConciergeOpen(true)}

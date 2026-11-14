@@ -6,6 +6,7 @@ import { LANGUAGES, type Preferences } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useApp } from '../app-provider'
 import { PageHeader } from '../page-header'
+import { Pills } from '../pills'
 
 export function SettingsView() {
   const { t, prefs, updatePrefs, resetPrefs } = useApp()
@@ -17,7 +18,7 @@ export function SettingsView() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title={t('settings.title')}>
+      <PageHeader title={t('settings.title')} backHref="/">
         <p className="text-lg leading-relaxed text-muted-foreground text-pretty">{t('settings.intro')}</p>
       </PageHeader>
 
@@ -79,14 +80,10 @@ export function SettingsView() {
 
       <Section title={t('settings.location')}>
         <Toggle label={t('settings.deviceLocation')} checked={prefs.useDeviceLocation} onChange={(v) => set({ useDeviceLocation: v })} />
-        <label className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2">
           <span className="text-lg font-semibold">{t('settings.radius')}</span>
-          <select value={prefs.defaultRadius} onChange={(e) => set({ defaultRadius: Number(e.target.value) })} className="min-h-12 rounded-2xl bg-card px-4 text-lg ring-1 ring-border">
-            {[2, 5, 10, 25].map((m) => (
-              <option key={m} value={m}>{`${m} mi`}</option>
-            ))}
-          </select>
-        </label>
+          <Pills label={t('settings.radius')} value={prefs.defaultRadius} onChange={(v) => set({ defaultRadius: v })} options={[2, 5, 10, 25].map((m) => ({ value: m, label: t('filters.miles', { n: m }) }))} />
+        </div>
       </Section>
 
       <Section title={t('settings.privacy')}>

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { LANGUAGE_META } from '@/lib/i18n'
 import { LANGUAGES, type SearchFilters } from '@/lib/types'
 import { useApp } from '../app-provider'
+import { Pills } from '../pills'
 
 const RADII = [1, 3, 5, 10, 25]
 
@@ -13,7 +14,6 @@ export function FiltersPanel({ onClose }: { onClose: () => void }) {
   const [radius, setRadius] = useState(search?.radiusMiles ?? 5)
 
   const set = <K extends keyof SearchFilters>(k: K, v: SearchFilters[K]) => setFilters((f) => ({ ...f, [k]: v }))
-  const selectCls = 'h-12 w-full rounded-full bg-background px-4 text-base ring-1 ring-input outline-none focus:ring-2 focus:ring-ring'
 
   return (
     <form
@@ -25,43 +25,38 @@ export function FiltersPanel({ onClose }: { onClose: () => void }) {
       className="flex flex-col gap-4 rounded-[1.75rem] bg-card p-5 ring-1 ring-border"
       aria-label={t('results.refine')}
     >
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field id="f-radius" label={t('filters.distance')}>
-          <select id="f-radius" className={selectCls} value={radius} onChange={(e) => setRadius(Number(e.target.value))}>
-            {RADII.map((r) => (
-              <option key={r} value={r}>
-                {t('filters.miles', { n: r })}
-              </option>
-            ))}
-          </select>
+      <div className="flex flex-col gap-4">
+        <Field label={t('filters.distance')}>
+          <Pills label={t('filters.distance')} value={radius} onChange={setRadius} options={RADII.map((r) => ({ value: r, label: t('filters.miles', { n: r }) }))} />
         </Field>
-        <Field id="f-cost" label={t('filters.cost')}>
-          <select id="f-cost" className={selectCls} value={filters.cost ?? 'any'} onChange={(e) => set('cost', e.target.value as SearchFilters['cost'])}>
-            <option value="any">{t('filters.any')}</option>
-            <option value="free">{t('cost.free')}</option>
-            <option value="subsidized">{t('cost.subsidized')}</option>
-            <option value="paid">{t('cost.paid')}</option>
-          </select>
+        <Field label={t('filters.cost')}>
+          <Pills
+            label={t('filters.cost')}
+            value={filters.cost ?? 'any'}
+            onChange={(v) => set('cost', v)}
+            options={[
+              { value: 'any', label: t('filters.any') },
+              { value: 'free', label: t('cost.free') },
+              { value: 'subsidized', label: t('cost.subsidized') },
+              { value: 'paid', label: t('cost.paid') },
+            ]}
+          />
         </Field>
-        <Field id="f-age" label={t('filters.age')}>
-          <select id="f-age" className={selectCls} value={filters.ageGroup ?? 'any'} onChange={(e) => set('ageGroup', e.target.value as SearchFilters['ageGroup'])}>
-            <option value="any">{t('filters.any')}</option>
-            {(['child', 'teen', 'adult', 'senior'] as const).map((a) => (
-              <option key={a} value={a}>
-                {t(`age.${a}`)}
-              </option>
-            ))}
-          </select>
+        <Field label={t('filters.age')}>
+          <Pills
+            label={t('filters.age')}
+            value={filters.ageGroup ?? 'any'}
+            onChange={(v) => set('ageGroup', v)}
+            options={[{ value: 'any' as const, label: t('filters.any') }, ...(['child', 'teen', 'adult', 'senior'] as const).map((a) => ({ value: a, label: t(`age.${a}`) }))]}
+          />
         </Field>
-        <Field id="f-lang" label={t('filters.language')}>
-          <select id="f-lang" className={selectCls} value={filters.language ?? 'any'} onChange={(e) => set('language', e.target.value as SearchFilters['language'])}>
-            <option value="any">{t('filters.any')}</option>
-            {LANGUAGES.map((l) => (
-              <option key={l} value={l}>
-                {LANGUAGE_META[l].native}
-              </option>
-            ))}
-          </select>
+        <Field label={t('filters.language')}>
+          <Pills
+            label={t('filters.language')}
+            value={filters.language ?? 'any'}
+            onChange={(v) => set('language', v)}
+            options={[{ value: 'any' as const, label: t('filters.any') }, ...LANGUAGES.map((l) => ({ value: l, label: LANGUAGE_META[l].native }))]}
+          />
         </Field>
       </div>
       <fieldset className="flex flex-col gap-2">
@@ -90,12 +85,10 @@ export function FiltersPanel({ onClose }: { onClose: () => void }) {
   )
 }
 
-function Field({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-base font-semibold">
-        {label}
-      </label>
+    <div className="flex flex-col gap-2">
+      <span className="text-base font-semibold">{label}</span>
       {children}
     </div>
   )

@@ -15,7 +15,7 @@ export function MoreView() {
   const { t } = useApp()
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title={t('more.title')} />
+      <PageHeader title={t('more.title')} backHref="/" />
       <SavedSection />
       <RemindersSection />
       <UpdatesSection />

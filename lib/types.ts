@@ -230,3 +230,18 @@ export interface SearchResponse {
   radiusExpanded: boolean
   origin: { lat: number; lng: number; label: string } | null
 }
+
+export type SearchCriteria = Pick<SearchRequest, 'query' | 'location' | 'radiusMiles' | 'answers' | 'filters'>
+
+/** A completed search and the exact results it produced, kept independently of the active Results tab. */
+export interface SearchHistoryEntry {
+  id: string
+  createdAt: string
+  updatedAt: string
+  criteria: SearchCriteria
+  page: number
+  total: number
+  response: SearchResponse
+}
+
+export type SearchHistorySummary = Omit<SearchHistoryEntry, 'response'>

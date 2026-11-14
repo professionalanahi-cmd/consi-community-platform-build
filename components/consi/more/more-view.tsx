@@ -1,6 +1,6 @@
 'use client'
 
-import { Bell, Bookmark, CalendarDays, Info, LifeBuoy, Building2, Trash2, Download } from 'lucide-react'
+import { Bell, Bookmark, CalendarDays, ChevronRight, History, Info, LifeBuoy, Building2, Trash2, Download } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 import useSWR from 'swr'
@@ -16,6 +16,14 @@ export function MoreView() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title={t('more.title')} />
+      <Link href="/more/history" className="flex items-center gap-3 rounded-[1.75rem] bg-card p-5 shadow-sm hover:bg-muted">
+        <History className="size-6 shrink-0 text-accent-foreground" aria-hidden="true" />
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="font-heading text-xl font-semibold">{t('history.title')}</span>
+          <span className="text-base text-muted-foreground">{t('history.desc')}</span>
+        </span>
+        <ChevronRight className="size-6 shrink-0 text-muted-foreground" aria-hidden="true" />
+      </Link>
       <SavedSection />
       <RemindersSection />
       <UpdatesSection />

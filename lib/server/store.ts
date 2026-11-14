@@ -6,7 +6,10 @@ import type {
   Reminder,
   Resource,
   ReviewEvent,
+  SearchCriteria,
+  SearchHistoryEntry,
   SearchLog,
+  SearchResponse,
   TrackEvent,
   TrackEventType,
 } from '../types'
@@ -24,7 +27,12 @@ interface GuestData {
   saved: string[]
   reminders: Reminder[]
   prefs: Preferences | null
+  history: SearchHistoryEntry[]
+  /** Points at the history entry shown on the Results tab. Clearing results only nulls this pointer. */
+  activeHistoryId: string | null
 }
+
+const HISTORY_LIMIT = 50
 
 interface DB {
   resources: Map<string, Resource>
@@ -97,10 +105,30 @@ export function newId(prefix: string) {
 export function guest(id: string): GuestData {
   let g = db.guests.get(id)
   if (!g) {
-    g = { saved: [], reminders: [], prefs: null }
+    g = { saved: [], reminders: [], prefs: null, history: [], activeHistoryId: null }
     db.guests.set(id, g)
   }
+  // Guests created before search history existed (kept across hot reloads) lack these fields.
+  g.history ??= []
+  g.activeHistoryId ??= null
   return g
+}
+
+/**
+ * One history entry per search session: refinements, follow-up answers and
+ * "show more" update the same entry so history reflects what the user last saw.
+ */
+export function recordSearch(guestId: string, id: string, criteria: SearchCriteria, page: number, response: SearchResponse) {
+  const g = guest(guestId)
+  const now = new Date().toISOString()
+  const existing = g.history.find((h) => h.id === id)
+  if (existing) {
+    Object.assign(existing, { criteria, page, total: response.total, response, updatedAt: now })
+  } else {
+    g.history.unshift({ id, createdAt: now, updatedAt: now, criteria, page, total: response.total, response })
+    if (g.history.length > HISTORY_LIMIT) g.history.length = HISTORY_LIMIT
+  }
+  g.activeHistoryId = id
 }
 
 export function publishedResources() {

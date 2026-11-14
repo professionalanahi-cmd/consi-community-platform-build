@@ -49,10 +49,11 @@ export function ConciergeLauncher() {
           type="button"
           onClick={() => setConciergeOpen(true)}
           aria-label={t('home.talk')}
-          className="fixed bottom-24 right-4 z-40 flex items-center gap-2 rounded-full bg-primary py-2 pl-2 pr-5 text-base font-semibold text-primary-foreground shadow-lg lg:right-[calc(50%-18rem)]"
+          className="fixed bottom-24 right-3 z-40 flex items-center gap-2 rounded-full bg-primary p-1.5 text-base font-semibold text-primary-foreground shadow-lg sm:py-2 sm:pl-2 sm:pr-5 lg:right-[calc(50%-18rem)]"
         >
           <Orb size={40} />
-          <span aria-hidden="true">CONSI</span>
+          {/* On phones the orb alone is the button, so it covers as little of the page as possible. */}
+          <span aria-hidden="true" className="hidden sm:inline">CONSI</span>
         </button>
       )}
       <dialog

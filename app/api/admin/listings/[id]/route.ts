@@ -36,7 +36,10 @@ export const PATCH = handle(async (req: Request, ctx: { params: Promise<{ id: st
     r.source = 'Provider submission, verified by CONSI admin'
     r.translations = await autoTranslate(r).catch(() => r.translations)
     // Publish into the live engine too, so residents find it in search in any language.
-    await livePublish(r)
+    if (!db.reviews.some((v) => v.resourceId === id && v.action === 'published_live')) {
+      const liveId = await livePublish(r)
+      if (liveId) logReview(id, 'admin', 'published_live', liveId)
+    }
   } else if (action === 'mark_verified') {
     r.verification = 'verified'
     r.lastVerified = now

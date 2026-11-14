@@ -217,3 +217,60 @@ export async function livePublish(r: Resource): Promise<string | null> {
     return null
   }
 }
+
+/** Flyer text -> draft fields, using the engine's extractor (Claude Haiku). Returns null if unavailable. */
+export async function liveExtract(text: string) {
+  const token = process.env.CONCIERGE_ADMIN_TOKEN
+  if (!liveEnabled() || !token || text.trim().length < 20) return null
+  try {
+    const out = await api<{ draft: Record<string, unknown>; missing: string[] }>(
+      '/api/admin/ingest',
+      { method: 'POST', body: JSON.stringify({ text }), headers: { 'x-admin-token': token } },
+      20000,
+    )
+    const d = out.draft as Record<string, string | string[] | null | undefined>
+    const str = (k: string) => (typeof d[k] === 'string' && d[k] ? (d[k] as string) : null)
+    const address = str('address')
+    const cost = str('costStatus')
+    const FIELD: Record<string, string> = { description: 'summary', costStatus: 'cost', hours: 'schedule', eligibilitySummary: 'eligibilityText', actionUrl: 'website', audience: 'ageGroups' }
+    return {
+      organization: str('provider'),
+      name: str('name'),
+      summary: str('description'),
+      categories: CATEGORY[str('category') ?? ''] ?? [],
+      cost: cost === 'free' ? ('free' as const) : cost === 'low' ? ('subsidized' as const) : cost === 'paid' ? ('paid' as const) : null,
+      costDetail: str('costNote'),
+      ageGroups: [] as ('child' | 'teen' | 'adult' | 'senior')[],
+      eligibilityText: str('eligibilitySummary'),
+      address: address ? address.split(',')[0].trim() : null,
+      city: str('city'),
+      zip: address?.match(/\b9\d{4}\b/)?.[0] ?? null,
+      phone: str('phone'),
+      email: str('email'),
+      website: str('actionUrl') ?? str('url'),
+      languages: (Array.isArray(d.languagesOffered) ? d.languagesOffered : []).filter((l): l is Lang => (LANGS as string[]).includes(l)),
+      schedule: str('hours'),
+      deadline: null,
+      startDate: null,
+      registrationRequired: null,
+      sourceLanguage: 'en' as const,
+      rawText: text,
+      uncertainFields: [...new Set(out.missing.filter((m) => m !== 'lat' && m !== 'lon').map((m) => FIELD[m] ?? m).concat(['ageGroups', 'zip']))],
+    }
+  } catch (e) {
+    console.error('[live] extract failed', e)
+    return null
+  }
+}
+
+/** Engine-side counts for listings this app published there: { liveId: { shown, referrals } }. */
+export async function liveStats(): Promise<Record<string, { shown: number; referrals: number }>> {
+  const token = process.env.CONCIERGE_ADMIN_TOKEN
+  if (!liveEnabled() || !token) return {}
+  try {
+    const out = await api<{ resources: { id: string; shown: number; referrals: number }[] }>('/api/admin/resources', { headers: { 'x-admin-token': token } })
+    return Object.fromEntries(out.resources.map((r) => [r.id, { shown: r.shown ?? 0, referrals: r.referrals ?? 0 }]))
+  } catch {
+    return {}
+  }
+}

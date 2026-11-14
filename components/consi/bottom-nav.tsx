@@ -20,7 +20,7 @@ export function BottomNav() {
   const { t, setConciergeOpen } = useApp()
   return (
     <nav aria-label={t('nav.main')} className="sticky bottom-0 z-30 border-t border-border bg-background/95 backdrop-blur">
-      <ul className="mx-auto flex max-w-xl items-stretch justify-around px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2">
+      <ul className="mx-auto flex max-w-xl items-stretch justify-around gap-0.5 px-1.5 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2">
         {ITEMS.map(({ href, key, icon: Icon, guide }, i) => {
           const active = href === '/' ? pathname === '/' : pathname.startsWith(href)
           return (
@@ -38,18 +38,18 @@ export function BottomNav() {
                   </button>
                 </li>
               )}
-            <li className="flex-1">
+            <li className="min-w-0 flex-1">
               <Link
                 href={href}
                 data-guide={guide}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl text-[0.8rem] font-medium leading-tight transition-colors sm:text-sm',
+                  'flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl px-0.5 text-[0.7rem] font-medium leading-tight transition-colors min-[400px]:text-[0.8rem] sm:text-sm',
                   active ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 <Icon className="size-6" aria-hidden="true" strokeWidth={active ? 2.4 : 2} />
-                {t(key)}
+                <span className="max-w-full truncate">{t(key)}</span>
               </Link>
             </li>
             </Fragment>

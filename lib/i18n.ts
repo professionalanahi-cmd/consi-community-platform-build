@@ -530,8 +530,8 @@ const es: Dict = {
 
 const hy: Dict = {
   'nav.home': 'Գլխավոր',
-  'nav.results': 'Արդյունքներ',
-  'nav.settings': 'Կարգավորումներ',
+  'nav.results': 'Արդյունք',
+  'nav.settings': 'Կարգավորել',
   'nav.more': 'Ավելին',
   'nav.main': 'Հիմնական նավիգացիա',
   'common.back': 'Հետ',

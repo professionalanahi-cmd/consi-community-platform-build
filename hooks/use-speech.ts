@@ -69,17 +69,23 @@ export function useDictation(speechLang: string, onFinal: (text: string) => void
   return { listening, interim, error, supported, start, stop }
 }
 
-/** Browser text-to-speech used by the demo concierge and "read results aloud". */
+/**
+ * Text-to-speech used by the concierge and "read results aloud".
+ * Tries ElevenLabs audio first (natural voice in English, Spanish, Armenian and Mandarin, via /api/voice/tts);
+ * if that is unavailable it falls back to the browser's built-in voice.
+ */
 export function useSpeaker(speechLang: string, rate: number) {
   const [speaking, setSpeaking] = useState(false)
+  const audio = useRef<HTMLAudioElement | null>(null)
+  const ticket = useRef(0)
 
-  const speak = useCallback(
-    (text: string, rateOverride?: number) => {
+  const browserSpeak = useCallback(
+    (text: string, r: number) => {
       if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
       window.speechSynthesis.cancel()
       const u = new SpeechSynthesisUtterance(text)
       u.lang = speechLang
-      u.rate = rateOverride ?? rate
+      u.rate = r
       const voice = window.speechSynthesis.getVoices().find((v) => v.lang.toLowerCase().startsWith(speechLang.slice(0, 2).toLowerCase()))
       if (voice) u.voice = voice
       u.onstart = () => setSpeaking(true)
@@ -87,13 +93,44 @@ export function useSpeaker(speechLang: string, rate: number) {
       u.onerror = () => setSpeaking(false)
       window.speechSynthesis.speak(u)
     },
-    [speechLang, rate],
+    [speechLang],
   )
 
   const cancel = useCallback(() => {
+    ticket.current++
+    audio.current?.pause()
+    audio.current = null
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) window.speechSynthesis.cancel()
     setSpeaking(false)
   }, [])
+
+  const speak = useCallback(
+    (text: string, rateOverride?: number) => {
+      if (typeof window === 'undefined' || !text.trim()) return
+      cancel()
+      const mine = ++ticket.current
+      const r = rateOverride ?? rate
+      setSpeaking(true)
+      fetch('/api/voice/tts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text, lang: speechLang.slice(0, 2).toLowerCase() }) })
+        .then(async (res) => {
+          if (mine !== ticket.current) return
+          if (res.status !== 200 || !res.headers.get('content-type')?.startsWith('audio/')) throw new Error('no audio')
+          const a = new Audio(URL.createObjectURL(await res.blob()))
+          if (mine !== ticket.current) return
+          a.playbackRate = Math.min(2, Math.max(0.5, r))
+          a.onended = () => mine === ticket.current && setSpeaking(false)
+          a.onerror = () => mine === ticket.current && setSpeaking(false)
+          audio.current = a
+          await a.play()
+        })
+        .catch(() => {
+          if (mine !== ticket.current) return
+          setSpeaking(false)
+          browserSpeak(text, r)
+        })
+    },
+    [speechLang, rate, cancel, browserSpeak],
+  )
 
   useEffect(() => cancel, [cancel])
 

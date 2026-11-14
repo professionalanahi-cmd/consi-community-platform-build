@@ -17,6 +17,7 @@ import type {
 } from '../types'
 import { distanceMiles, resolveLocation, type GeoPoint } from './gis'
 import { db, publishedResources } from './store'
+import { liveEnabled, liveSearch } from './live'
 
 export const AI_MODEL = 'google/gemini-3.5-flash'
 const PAGE_SIZE = 3
@@ -221,7 +222,19 @@ export function localize(r: Resource, lang: Lang) {
   return { name: r.name, summary: r.summary, translated: false }
 }
 
+/** Live engine first (real Glendale records, Claude ranking, trust statuses); built-in sample engine as the fallback. */
 export async function search(req: SearchRequest): Promise<SearchResponse> {
+  if (liveEnabled()) {
+    try {
+      return await liveSearch(req)
+    } catch (e) {
+      console.error('[search] live engine unavailable, using sample engine', e)
+    }
+  }
+  return sampleSearch(req)
+}
+
+async function sampleSearch(req: SearchRequest): Promise<SearchResponse> {
   const query = req.query.trim()
   const intent = query ? await interpret(query, req.lang) : { ...keywordInterpret(''), summary: '' }
   const geoFromUser = Boolean(req.location && (req.location.zip || req.location.lat != null))

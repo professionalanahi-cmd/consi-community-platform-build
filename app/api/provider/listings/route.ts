@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { handle, HttpError } from '@/lib/server/http'
 import { listingInput, toResourceFields } from '@/lib/server/listings'
+import { livePublish, liveProviderListings, liveStats } from '@/lib/server/live'
 import { requireRole } from '@/lib/server/session'
 import { db, logReview, newId } from '@/lib/server/store'
 import type { Resource } from '@/lib/types'
@@ -18,10 +19,21 @@ export const GET = handle(async () => {
   const { providerId } = await requireRole('provider')
   const provider = db.providers.get(providerId!)
   if (!provider) throw new HttpError(404, 'Provider not found')
+  // Listings published into the live engine get their real impression and referral counts from it.
+  const live = await liveStats()
   const listings = [...db.resources.values()]
     .filter((r) => r.providerId === providerId && r.status !== 'removed')
-    .map((r) => ({ ...r, stats: statsFor(r.id), reviews: db.reviews.filter((v) => v.resourceId === r.id) }))
-  return { provider, listings }
+    .map((r) => {
+      const reviews = db.reviews.filter((v) => v.resourceId === r.id)
+      const liveId = reviews.find((v) => v.action === 'published_live')?.note
+      const local = statsFor(r.id)
+      const remote = liveId ? live[liveId] : undefined
+      return { ...r, stats: remote ? { impressions: local.impressions + remote.shown, views: local.views, referrals: local.referrals + remote.referrals } : local, reviews }
+    })
+  // Add anything this organization published to the engine that this server instance no longer remembers.
+  const linked = new Set(listings.flatMap((l) => l.reviews.filter((v) => v.action === 'published_live').map((v) => v.note)))
+  const remote = (await liveProviderListings(provider.name.replace(/\s*\(Sample\)\s*$/i, ''), provider.id)).filter((r) => !linked.has(r.id))
+  return { provider, listings: [...remote, ...listings] }
 })
 
 const createSchema = listingInput.extend({ submit: z.boolean().default(false) })
@@ -47,5 +59,11 @@ export const POST = handle(async (req: Request) => {
   }
   db.resources.set(resource.id, resource)
   logReview(resource.id, 'provider', submit ? 'submitted' : 'saved_draft')
+  // When the provider confirms, the listing also goes into the live engine (marked "Posted by the provider",
+  // status Potential) so residents can find it right away in any language.
+  if (submit) {
+    const liveId = await livePublish(resource)
+    if (liveId) logReview(resource.id, 'provider', 'published_live', liveId)
+  }
   return { listing: resource }
 })

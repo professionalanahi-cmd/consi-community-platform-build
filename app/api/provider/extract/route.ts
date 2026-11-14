@@ -1,9 +1,12 @@
 import { generateText, Output } from 'ai'
 import { z } from 'zod'
 import { handle, HttpError } from '@/lib/server/http'
+import { liveExtract } from '@/lib/server/live'
 import { AI_MODEL } from '@/lib/server/matching'
 import { requireRole } from '@/lib/server/session'
 import { CATEGORIES, LANGUAGES } from '@/lib/types'
+
+export const maxDuration = 60
 
 const MAX_BYTES = 6 * 1024 * 1024
 const ALLOWED = ['image/png', 'image/jpeg', 'image/webp', 'application/pdf', 'text/plain']
@@ -54,6 +57,19 @@ export const POST = handle(async (req: Request) => {
     else content.push({ type: 'file', data: bytes, mediaType: file.type })
   }
   if (pasted.trim()) content.push({ type: 'text', text: `Flyer text:\n${pasted}` })
+
+  // Text flyers go to the live engine's extractor first (Claude Haiku). Images and PDFs use the model below.
+  const flyer = file instanceof File && file.size > 0 ? { name: file.name, mediaType: file.type } : { name: 'Pasted text', mediaType: 'text/plain' }
+  const plain = content.slice(1).every((c) => c.type === 'text') ? content.slice(1).map((c) => (c.type === 'text' ? c.text : '')).join('\n') : ''
+  if (plain) {
+    const fields = await liveExtract(plain.replace(/^Flyer text:\n/, ''))
+    if (fields) return { fields, flyer }
+  } else if (file instanceof File && file.size > 0 && file.size <= 4 * 1024 * 1024) {
+    // Photo or PDF of a flyer: the live engine reads it with Claude vision.
+    const data = Buffer.from(await file.arrayBuffer()).toString('base64')
+    const fields = await liveExtract(pasted, { mediaType: file.type, data })
+    if (fields) return { fields, flyer }
+  }
 
   const { output } = await generateText({
     model: AI_MODEL,

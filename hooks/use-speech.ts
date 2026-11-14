@@ -19,27 +19,96 @@ function getRecognition(): (new () => RecognitionLike) | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null
 }
 
-/** Browser speech-to-text for dictating a search. */
+/** Languages the browser's own recogniser cannot handle: recorded and transcribed by ElevenLabs Scribe instead. */
+const SERVER_STT = ['hy']
+
+/**
+ * Speech-to-text for dictating a search or talking to the concierge.
+ * Uses the browser recogniser where it works; for Armenian (or browsers without one) it records the microphone,
+ * stops after a short silence, and sends the clip to /api/voice/stt (ElevenLabs Scribe).
+ */
 export function useDictation(speechLang: string, onFinal: (text: string) => void) {
   const [listening, setListening] = useState(false)
   const [interim, setInterim] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [supported, setSupported] = useState(true)
   const rec = useRef<RecognitionLike | null>(null)
+  const media = useRef<{ stop: () => void } | null>(null)
   const finalCb = useRef(onFinal)
   finalCb.current = onFinal
+  const useServer = useCallback(() => SERVER_STT.includes(speechLang.slice(0, 2).toLowerCase()) || !getRecognition(), [speechLang])
 
-  useEffect(() => setSupported(Boolean(getRecognition())), [])
+  useEffect(() => setSupported(Boolean(getRecognition()) || (typeof navigator !== 'undefined' && Boolean(navigator.mediaDevices?.getUserMedia))), [])
 
-  const stop = useCallback(() => rec.current?.stop(), [])
+  const stop = useCallback(() => {
+    rec.current?.stop()
+    media.current?.stop()
+  }, [])
+
+  const startRecorder = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mr = new MediaRecorder(stream)
+      const chunks: Blob[] = []
+      const ctx = new AudioContext()
+      const analyser = ctx.createAnalyser()
+      analyser.fftSize = 1024
+      ctx.createMediaStreamSource(stream).connect(analyser)
+      const buf = new Uint8Array(analyser.fftSize)
+      let heard = false
+      let quietSince = 0
+      const started = Date.now()
+      // Stop 1.4 s after the speaker goes quiet, or after 12 s.
+      const timer = window.setInterval(() => {
+        analyser.getByteTimeDomainData(buf)
+        let sum = 0
+        for (const v of buf) sum += (v - 128) ** 2
+        const loud = Math.sqrt(sum / buf.length) > 6
+        if (loud) {
+          heard = true
+          quietSince = 0
+        } else if (heard && !quietSince) quietSince = Date.now()
+        if ((heard && quietSince && Date.now() - quietSince > 1400) || Date.now() - started > 12000) mr.state === 'recording' && mr.stop()
+      }, 120)
+      mr.ondataavailable = (e) => chunks.push(e.data)
+      mr.onstop = async () => {
+        window.clearInterval(timer)
+        stream.getTracks().forEach((t) => t.stop())
+        ctx.close().catch(() => {})
+        media.current = null
+        setInterim('…')
+        try {
+          const fd = new FormData()
+          fd.append('file', new Blob(chunks, { type: mr.mimeType || 'audio/webm' }), 'speech.webm')
+          const d = (await fetch('/api/voice/stt', { method: 'POST', body: fd }).then((r) => r.json())) as { text?: string | null }
+          if (d.text?.trim()) finalCb.current(d.text.trim())
+          else setError('no-speech')
+        } catch {
+          setError('network')
+        }
+        setListening(false)
+        setInterim('')
+      }
+      media.current = { stop: () => mr.state === 'recording' && mr.stop() }
+      mr.start()
+      setListening(true)
+    } catch {
+      setError('not-allowed')
+      setListening(false)
+    }
+  }, [])
 
   const start = useCallback(() => {
+    setError(null)
+    if (useServer()) {
+      void startRecorder()
+      return
+    }
     const Ctor = getRecognition()
     if (!Ctor) {
       setSupported(false)
       return
     }
-    setError(null)
     const r = new Ctor()
     r.lang = speechLang
     r.interimResults = true
@@ -62,9 +131,15 @@ export function useDictation(speechLang: string, onFinal: (text: string) => void
     rec.current = r
     r.start()
     setListening(true)
-  }, [speechLang])
+  }, [speechLang, useServer, startRecorder])
 
-  useEffect(() => () => rec.current?.stop(), [])
+  useEffect(
+    () => () => {
+      rec.current?.stop()
+      media.current?.stop()
+    },
+    [],
+  )
 
   return { listening, interim, error, supported, start, stop }
 }

@@ -280,3 +280,25 @@ export async function liveStats(): Promise<Record<string, { shown: number; refer
     return {}
   }
 }
+
+/**
+ * Listings this organization published into the engine, with their real counts. The engine is durable, so this
+ * keeps the provider dashboard correct even when this app's in-memory store has been reset by a new server instance.
+ */
+export async function liveProviderListings(org: string, providerId: string) {
+  const token = process.env.CONCIERGE_ADMIN_TOKEN
+  if (!liveEnabled() || !token) return []
+  try {
+    const list = await api<{ resources: { id: string; provider: string | null; addedByAdmin: boolean; status: string; shown: number; referrals: number }[] }>('/api/admin/resources', { headers: { 'x-admin-token': token } })
+    const mine = list.resources.filter((r) => r.addedByAdmin && r.status === 'published' && (r.provider ?? '').trim().toLowerCase() === org.trim().toLowerCase())
+    if (!mine.length) return []
+    const full = await api<{ resources: LiveResource[] }>(`/api/resources?ids=${mine.map((m) => encodeURIComponent(m.id)).join(',')}`)
+    return full.resources.map((r) => {
+      const m = mine.find((x) => x.id === r.id)!
+      return { ...toResource(r), providerId, source: 'Provider submission (live)', stats: { impressions: m.shown ?? 0, views: 0, referrals: m.referrals ?? 0 }, reviews: [] }
+    })
+  } catch (e) {
+    console.error('[live] provider listings failed', e)
+    return []
+  }
+}

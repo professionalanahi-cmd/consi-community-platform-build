@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { handle, HttpError } from '@/lib/server/http'
 import { listingInput, toResourceFields } from '@/lib/server/listings'
-import { livePublish, liveStats } from '@/lib/server/live'
+import { livePublish, liveProviderListings, liveStats } from '@/lib/server/live'
 import { requireRole } from '@/lib/server/session'
 import { db, logReview, newId } from '@/lib/server/store'
 import type { Resource } from '@/lib/types'
@@ -30,7 +30,10 @@ export const GET = handle(async () => {
       const remote = liveId ? live[liveId] : undefined
       return { ...r, stats: remote ? { impressions: local.impressions + remote.shown, views: local.views, referrals: local.referrals + remote.referrals } : local, reviews }
     })
-  return { provider, listings }
+  // Add anything this organization published to the engine that this server instance no longer remembers.
+  const linked = new Set(listings.flatMap((l) => l.reviews.filter((v) => v.action === 'published_live').map((v) => v.note)))
+  const remote = (await liveProviderListings(provider.name.replace(/\s*\(Sample\)\s*$/i, ''), provider.id)).filter((r) => !linked.has(r.id))
+  return { provider, listings: [...remote, ...listings] }
 })
 
 const createSchema = listingInput.extend({ submit: z.boolean().default(false) })

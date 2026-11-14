@@ -244,7 +244,7 @@ export async function liveExtract(text: string, file?: { mediaType: string; data
       ageGroups: ([
         [/senior|older adult|elder|55\+|60\+|65\+/i, 'senior'],
         [/teen|youth|high school/i, 'teen'],
-        [/child|kid|toddler|preschool|infant/i, 'child'],
+        [/child|kid|toddler|preschool|infant|grade|student/i, 'child'],
         [/adult/i, 'adult'],
       ] as [RegExp, 'child' | 'teen' | 'adult' | 'senior'][]).filter(([re]) => re.test(str('audience') ?? '')).map(([, g]) => g).slice(0, 2),
       eligibilityText: str('eligibilitySummary'),

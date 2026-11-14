@@ -4,7 +4,9 @@ import { handle } from '@/lib/server/http'
  * Returns credentials for a live ElevenLabs Agents conversation, or demo mode.
  * The API key never leaves the server; the browser receives a short-lived signed URL.
  */
-export const GET = handle(async () => {
+export const GET = handle(async (req: Request) => {
+  // ElevenLabs Agents does not support Armenian yet: Armenian uses the typed concierge with ElevenLabs speech.
+  if (new URL(req.url).searchParams.get('lang') === 'hy') return { mode: 'demo' as const }
   const agentId = process.env.ELEVENLABS_AGENT_ID
   const apiKey = process.env.ELEVENLABS_API_KEY
   if (!agentId) return { mode: 'demo' as const }

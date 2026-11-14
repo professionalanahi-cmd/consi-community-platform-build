@@ -11,10 +11,10 @@ import { LiveCall } from './live-call'
 type VoiceSession = { mode: 'demo'; reason?: string } | { mode: 'live'; signedUrl?: string; agentId?: string }
 
 export function ConciergeLauncher() {
-  const { t, conciergeOpen, setConciergeOpen, startSearch, setGuide } = useApp()
+  const { t, lang, conciergeOpen, setConciergeOpen, startSearch, setGuide } = useApp()
   const router = useRouter()
   const dialogRef = useRef<HTMLDialogElement>(null)
-  const { data } = useSWR<VoiceSession>(conciergeOpen ? 'voice-session' : null, () => fetch('/api/voice/session').then((r) => r.json()), {
+  const { data } = useSWR<VoiceSession>(conciergeOpen ? `voice-session-${lang}` : null, () => fetch(`/api/voice/session?lang=${lang}`).then((r) => r.json()), {
     revalidateOnFocus: false,
     revalidateIfStale: false,
   })

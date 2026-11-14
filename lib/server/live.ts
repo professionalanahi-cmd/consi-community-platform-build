@@ -163,7 +163,7 @@ export async function liveReferral(resourceId: string) {
   if (!liveEnabled()) return
   const sid = searchOf.get(resourceId)
   try {
-    await fetch(`${LIVE_API}/api/go/${encodeURIComponent(resourceId)}${sid ? `?searchId=${sid}` : ''}`, { redirect: 'manual', cache: 'no-store', signal: AbortSignal.timeout(5000) })
+    await fetch(`${LIVE_API}/api/referral/${encodeURIComponent(resourceId)}${sid ? `?searchId=${sid}` : ''}`, { method: 'POST', cache: 'no-store', signal: AbortSignal.timeout(5000) })
   } catch {
     /* the click itself must never fail */
   }

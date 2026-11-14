@@ -156,7 +156,7 @@ export function ResultsView() {
               </div>
             ) : (
               <>
-                <p className="text-base text-muted-foreground">{t('results.showing', { n: data.results.length, total: data.total })}</p>
+                <p className="text-base text-muted-foreground">{t('results.showing', { shown: data.results.length, total: data.total })}</p>
                 {view === 'map' && (
                   <div className="flex flex-col gap-2">
                     <ResultsMap results={data.results} origin={data.origin} milesLabel={(n) => t('results.miles', { n: n.toFixed(1) })} />

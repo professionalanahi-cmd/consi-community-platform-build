@@ -22,7 +22,7 @@ interface Overview {
     staleCount: number
     stale: { id: string; name: string; lastVerified: string | null }[]
   }
-  integrations: Record<string, string>
+  integrations: Record<string, string | Record<string, unknown>>
 }
 
 const fetcher = async (url: string) => {
@@ -54,7 +54,8 @@ export function AdminDashboard() {
         <ul className="flex flex-wrap gap-2" aria-label="Integration status">
           {Object.entries(data.integrations).map(([k, v]) => (
             <li key={k} className="rounded-full bg-card px-3 py-1 text-sm ring-1 ring-border">
-              <span className="font-semibold capitalize">{k}:</span> {v}
+              <span className="font-semibold capitalize">{k}:</span>{' '}
+              {typeof v === 'string' ? v : Object.entries(v).map(([a, b]) => `${a} ${String(b)}`).join(' · ')}
             </li>
           ))}
         </ul>

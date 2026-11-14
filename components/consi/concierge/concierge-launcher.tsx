@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { useEffect, useRef } from 'react'
 import useSWR from 'swr'
 import { useApp } from '../app-provider'
@@ -13,7 +13,6 @@ type VoiceSession = { mode: 'demo'; reason?: string } | { mode: 'live'; signedUr
 export function ConciergeLauncher() {
   const { t, lang, conciergeOpen, setConciergeOpen, startSearch, setGuide } = useApp()
   const router = useRouter()
-  const pathname = usePathname()
   const dialogRef = useRef<HTMLDialogElement>(null)
   const { data } = useSWR<VoiceSession>(conciergeOpen ? `voice-session-${lang}` : null, () => fetch(`/api/voice/session?lang=${lang}`).then((r) => r.json()), {
     revalidateOnFocus: false,
@@ -44,18 +43,6 @@ export function ConciergeLauncher() {
 
   return (
     <>
-      {!conciergeOpen && pathname !== '/' && (
-        <button
-          type="button"
-          onClick={() => setConciergeOpen(true)}
-          aria-label={t('home.talk')}
-          className="fixed bottom-24 right-3 z-40 flex items-center gap-2 rounded-full bg-primary p-1.5 text-base font-semibold text-primary-foreground shadow-lg sm:py-2 sm:pl-2 sm:pr-5 lg:right-[calc(50%-18rem)]"
-        >
-          <Orb size={40} />
-          {/* On phones the orb alone is the button, so it covers as little of the page as possible. */}
-          <span aria-hidden="true" className="hidden sm:inline">CONSI</span>
-        </button>
-      )}
       <dialog
         ref={dialogRef}
         onClose={close}

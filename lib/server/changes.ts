@@ -1,6 +1,6 @@
 import 'server-only'
 import type { ChangedField, Resource, ResourceChangeKind } from '../types'
-import { db, newId } from './store'
+import { data } from './data'
 
 const TRACKED: { field: ChangedField['field']; kind: ResourceChangeKind; get: (r: Resource) => string | null }[] = [
   { field: 'eligibility', kind: 'eligibility', get: (r) => r.eligibility.map((e) => e.label).join('; ') || null },
@@ -14,16 +14,14 @@ const TRACKED: { field: ChangedField['field']; kind: ResourceChangeKind; get: (r
   { field: 'deadline', kind: 'deadline', get: (r) => r.deadline?.slice(0, 10) ?? null },
 ]
 
-function push(resourceId: string, kind: ResourceChangeKind, fields: ChangedField[], source: string) {
-  db.changes.unshift({ id: newId('chg'), resourceId, kind, fields, source, at: new Date().toISOString() })
-  if (db.changes.length > 500) db.changes.length = 500
-}
+const push = (resourceId: string, kind: ResourceChangeKind, fields: ChangedField[], source: string) =>
+  data.changes.add({ resourceId, kind, fields, source })
 
 /** Called when a listing is (re)published: diffs it against the last published version. */
-export function recordPublish(r: Resource) {
-  const before = db.snapshots.get(r.id)
+export async function recordPublish(r: Resource) {
+  const before = await data.changes.getSnapshot(r.id)
   if (!before) {
-    push(r.id, 'new_resource', [], r.source)
+    await push(r.id, 'new_resource', [], r.source)
   } else {
     const byKind = new Map<ResourceChangeKind, ChangedField[]>()
     for (const t of TRACKED) {
@@ -31,12 +29,12 @@ export function recordPublish(r: Resource) {
       const next = t.get(r)
       if (prev !== next) byKind.set(t.kind, [...(byKind.get(t.kind) ?? []), { field: t.field, before: prev, after: next }])
     }
-    for (const [kind, fields] of byKind) push(r.id, kind, fields, r.source)
+    for (const [kind, fields] of byKind) await push(r.id, kind, fields, r.source)
   }
-  db.snapshots.set(r.id, structuredClone(r))
+  await data.changes.setSnapshot(r)
 }
 
 /** Called when a published listing is paused, resumed or taken down. */
 export function recordListingStatus(r: Resource, before: 'listed' | 'paused', after: 'listed' | 'paused' | 'removed', source: string) {
-  push(r.id, 'availability', [{ field: 'status', before, after }], source)
+  return push(r.id, 'availability', [{ field: 'status', before, after }], source)
 }

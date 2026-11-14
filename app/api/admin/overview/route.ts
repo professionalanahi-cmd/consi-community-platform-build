@@ -1,31 +1,30 @@
 import { handle } from '@/lib/server/http'
 import { gisStatus } from '@/lib/server/gis'
 import { requireRole } from '@/lib/server/session'
-import { db } from '@/lib/server/store'
+import { data } from '@/lib/server/data'
 import { CATEGORIES } from '@/lib/types'
 
 export const GET = handle(async () => {
   await requireRole('admin')
-  const resources = [...db.resources.values()]
+  const [resources, providers, reviews, searches] = await Promise.all([
+    data.resources.list(),
+    data.providers.list(),
+    data.reviews.listRecent(50),
+    data.activity.listSearches(),
+  ])
   const now = Date.now()
-
-  const stats = (id: string) => {
-    const ev = db.events.filter((e) => e.resourceId === id)
-    const impressions = ev.filter((e) => e.type === 'impression').length
-    const views = ev.filter((e) => e.type === 'view').length
-    const referrals = ev.filter((e) => e.type === 'referral').length
-    return { impressions, views, referrals }
-  }
+  const allStats = await data.activity.statsFor(resources.map((r) => r.id))
+  const stats = (id: string) => allStats[id]
 
   const demand = CATEGORIES.map((c) => {
-    const rows = db.searches.filter((s) => s.categories.includes(c))
+    const rows = searches.filter((s) => s.categories.includes(c))
     return { category: c, searches: rows.length, zeroResults: rows.filter((s) => s.resultCount === 0).length }
   })
     .filter((d) => d.searches > 0)
     .sort((a, b) => b.searches - a.searches)
 
   const gapMap = new Map<string, { zip: string; category: string; count: number }>()
-  for (const s of db.searches.filter((x) => x.resultCount <= 1)) {
+  for (const s of searches.filter((x) => x.resultCount <= 1)) {
     for (const c of s.categories) {
       const key = `${s.zip ?? 'unknown'}:${c}`
       const g = gapMap.get(key) ?? { zip: s.zip ?? 'Unknown', category: c, count: 0 }
@@ -35,7 +34,7 @@ export const GET = handle(async () => {
   }
 
   const ruleCounts: Record<string, number> = {}
-  for (const s of db.searches) for (const r of s.unconfirmedRules) ruleCounts[r] = (ruleCounts[r] ?? 0) + 1
+  for (const s of searches) for (const r of s.unconfirmedRules) ruleCounts[r] = (ruleCounts[r] ?? 0) + 1
 
   const published = resources.filter((r) => r.status === 'published')
   const lowPerforming = published
@@ -50,10 +49,10 @@ export const GET = handle(async () => {
   return {
     queue: resources.filter((r) => r.status === 'submitted' || r.status === 'under_review'),
     listings: resources.map((r) => ({ ...r, stats: stats(r.id) })),
-    providers: [...db.providers.values()],
-    reviews: db.reviews.slice(0, 50),
+    providers,
+    reviews,
     insights: {
-      totalSearches: db.searches.length,
+      totalSearches: searches.length,
       demand,
       gaps: [...gapMap.values()].sort((a, b) => b.count - a.count).slice(0, 6),
       unconfirmedRules: Object.entries(ruleCounts).sort((a, b) => b[1] - a[1]),
@@ -65,7 +64,7 @@ export const GET = handle(async () => {
       ai: 'Vercel AI Gateway',
       voice: process.env.ELEVENLABS_AGENT_ID ? 'live' : 'demo',
       gis: gisStatus(),
-      database: 'demo (in-memory)',
+      database: data.label,
     },
   }
 })

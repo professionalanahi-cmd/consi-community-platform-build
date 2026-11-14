@@ -1,8 +1,8 @@
 import { z } from 'zod'
+import { data } from '@/lib/server/data'
 import { handle } from '@/lib/server/http'
 import { search } from '@/lib/server/matching'
 import { getGuestId } from '@/lib/server/session'
-import { recordSearch, track } from '@/lib/server/store'
 import { LANGUAGES } from '@/lib/types'
 
 const schema = z.object({
@@ -44,10 +44,10 @@ export const POST = handle(async (req: Request) => {
   const { historyId, ...body } = schema.parse(await req.json())
   const result = await search(body)
   const newlyShown = result.results.slice((result.page - 1) * 3)
-  for (const r of newlyShown) track(r.resource.id, 'impression')
+  await Promise.all(newlyShown.map((r) => data.activity.track(r.resource.id, 'impression')))
   if (historyId) {
     const { query, location, radiusMiles, answers, filters, page } = body
-    recordSearch(await getGuestId(), historyId, { query, location, radiusMiles, answers, filters }, page, result)
+    await data.history.record(await getGuestId(), historyId, { query, location, radiusMiles, answers, filters }, page, result)
   }
   return result
 })

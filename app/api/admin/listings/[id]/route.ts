@@ -3,7 +3,7 @@ import { handle, HttpError } from '@/lib/server/http'
 import { recordListingStatus, recordPublish } from '@/lib/server/changes'
 import { autoTranslate } from '@/lib/server/listings'
 import { requireRole } from '@/lib/server/session'
-import { db, logReview } from '@/lib/server/store'
+import { data } from '@/lib/server/data'
 import type { ListingStatus } from '@/lib/types'
 
 const schema = z.object({
@@ -23,7 +23,7 @@ const NEXT: Partial<Record<z.infer<typeof schema>['action'], ListingStatus>> = {
 export const PATCH = handle(async (req: Request, ctx: { params: Promise<{ id: string }> }) => {
   await requireRole('admin')
   const { id } = await ctx.params
-  const r = db.resources.get(id)
+  const r = await data.resources.get(id)
   if (!r) throw new HttpError(404, 'Listing not found')
   const { action, note } = schema.parse(await req.json())
   if (action === 'reject' && !note?.trim()) throw new HttpError(400, 'Add a note so the provider knows what to change')
@@ -49,10 +49,11 @@ export const PATCH = handle(async (req: Request, ctx: { params: Promise<{ id: st
   }
   if (note) r.reviewNotes = note
   r.updatedAt = now
-  if (action === 'approve_publish') recordPublish(r)
+  await data.resources.save(r)
+  if (action === 'approve_publish') await recordPublish(r)
   else if (wasPublished && (action === 'pause' || action === 'suspend' || action === 'remove'))
-    recordListingStatus(r, 'listed', action === 'pause' ? 'paused' : 'removed', 'CONSI admin review')
-  else if (action === 'unpause' && wasPaused) recordListingStatus(r, 'paused', 'listed', 'CONSI admin review')
-  logReview(id, 'admin', action, note)
+    await recordListingStatus(r, 'listed', action === 'pause' ? 'paused' : 'removed', 'CONSI admin review')
+  else if (action === 'unpause' && wasPaused) await recordListingStatus(r, 'paused', 'listed', 'CONSI admin review')
+  await data.reviews.log(id, 'admin', action, note)
   return { listing: r }
 })

@@ -1,5 +1,6 @@
 import { BottomNav } from '@/components/consi/bottom-nav'
 import { ConciergeLauncher } from '@/components/consi/concierge/concierge-launcher'
+import { LanguageSwitcher } from '@/components/consi/language-switcher'
 
 export default function ResidentLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -8,7 +9,10 @@ export default function ResidentLayout({ children }: { children: React.ReactNode
         <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground">
           Skip to content
         </a>
-        <main id="main" className="flex flex-1 flex-col px-5 pb-8 pt-6">
+        <div className="sticky top-0 z-40 flex items-center justify-end bg-background/95 px-5 pb-2 pt-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <LanguageSwitcher />
+        </div>
+        <main id="main" className="flex flex-1 flex-col px-5 pb-8 pt-2">
           {children}
         </main>
         <BottomNav />

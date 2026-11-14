@@ -1,26 +1,19 @@
 import { z } from 'zod'
+import { data, newId } from '@/lib/server/data'
 import { handle, HttpError } from '@/lib/server/http'
 import { listingInput, toResourceFields } from '@/lib/server/listings'
 import { requireRole } from '@/lib/server/session'
-import { db, logReview, newId } from '@/lib/server/store'
 import type { Resource } from '@/lib/types'
-
-function statsFor(id: string) {
-  const ev = db.events.filter((e) => e.resourceId === id)
-  return {
-    impressions: ev.filter((e) => e.type === 'impression').length,
-    views: ev.filter((e) => e.type === 'view').length,
-    referrals: ev.filter((e) => e.type === 'referral').length,
-  }
-}
 
 export const GET = handle(async () => {
   const { providerId } = await requireRole('provider')
-  const provider = db.providers.get(providerId!)
+  const provider = await data.providers.get(providerId!)
   if (!provider) throw new HttpError(404, 'Provider not found')
-  const listings = [...db.resources.values()]
-    .filter((r) => r.providerId === providerId && r.status !== 'removed')
-    .map((r) => ({ ...r, stats: statsFor(r.id), reviews: db.reviews.filter((v) => v.resourceId === r.id) }))
+  const owned = (await data.resources.list({ providerId: provider.id })).filter((r) => r.status !== 'removed')
+  const stats = await data.activity.statsFor(owned.map((r) => r.id))
+  const listings = await Promise.all(
+    owned.map(async (r) => ({ ...r, stats: stats[r.id], reviews: await data.reviews.listForResource(r.id) })),
+  )
   return { provider, listings }
 })
 
@@ -28,7 +21,7 @@ const createSchema = listingInput.extend({ submit: z.boolean().default(false) })
 
 export const POST = handle(async (req: Request) => {
   const { providerId } = await requireRole('provider')
-  const provider = db.providers.get(providerId!)
+  const provider = await data.providers.get(providerId!)
   if (!provider || provider.status === 'suspended') throw new HttpError(403, 'This organization cannot submit listings')
   const { submit, ...input } = createSchema.parse(await req.json())
   const now = new Date().toISOString()
@@ -45,7 +38,7 @@ export const POST = handle(async (req: Request) => {
     createdAt: now,
     updatedAt: now,
   }
-  db.resources.set(resource.id, resource)
-  logReview(resource.id, 'provider', submit ? 'submitted' : 'saved_draft')
+  await data.resources.save(resource)
+  await data.reviews.log(resource.id, 'provider', submit ? 'submitted' : 'saved_draft')
   return { listing: resource }
 })

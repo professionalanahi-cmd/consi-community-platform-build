@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { LANGUAGE_META } from '../i18n'
 import type { ChangedField, Lang, Resource, ResultUpdate, SearchHistoryEntry } from '../types'
 import { AI_MODEL } from './matching'
-import { db } from './store'
+import { data } from './data'
 
 const DAY = 86400000
 const CHANGE_WINDOW_DAYS = 60
@@ -36,16 +36,21 @@ const within = (iso: string | undefined, now: number, days: number) => {
  * Collects updates that trace back to a listing record or a recorded change.
  * Nothing here is generated: every draft is a fact the listing already holds.
  */
-function collect(entry: SearchHistoryEntry): Draft[] {
+async function collect(entry: SearchHistoryEntry): Promise<Draft[]> {
   const now = Date.now()
   const resultIds = new Set(entry.response.results.map((rec) => rec.resource.id))
   const categories = new Set(entry.response.interpretation.categories)
   const since = now - CHANGE_WINDOW_DAYS * DAY
   const drafts: Draft[] = []
 
-  for (const c of db.changes) {
-    if (new Date(c.at).getTime() < since || !c.source.trim()) continue
-    const r = db.resources.get(c.resourceId)
+  const changes = await data.changes.listSince(new Date(since).toISOString())
+  const resources = new Map(
+    (await data.resources.getMany([...new Set([...changes.map((c) => c.resourceId), ...resultIds])])).map((r) => [r.id, r]),
+  )
+
+  for (const c of changes) {
+    if (!c.source.trim()) continue
+    const r = resources.get(c.resourceId)
     if (!r) continue
     const inResults = resultIds.has(r.id)
     const isNewMatch =
@@ -55,7 +60,7 @@ function collect(entry: SearchHistoryEntry): Draft[] {
   }
 
   for (const id of resultIds) {
-    const r = db.resources.get(id)
+    const r = resources.get(id)
     if (!r || r.status !== 'published' || !r.source.trim()) continue
     const recordDate = r.lastVerified ?? r.updatedAt
     if (within(r.deadline, now, DEADLINE_WINDOW_DAYS)) {
@@ -143,7 +148,7 @@ async function summarize(drafts: Draft[], lang: Lang): Promise<Map<string, strin
 }
 
 export async function buildUpdates(entry: SearchHistoryEntry, lang: Lang): Promise<ResultUpdate[]> {
-  const drafts = collect(entry)
+  const drafts = await collect(entry)
   if (!drafts.length) return []
   const summaries = await summarize(drafts, lang)
   return drafts.map((d) => ({ ...d, aiSummary: summaries.get(d.id) ?? null }))

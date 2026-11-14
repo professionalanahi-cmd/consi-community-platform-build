@@ -5,6 +5,7 @@ import type {
   Provider,
   Reminder,
   Resource,
+  ResourceChange,
   ReviewEvent,
   SearchCriteria,
   SearchHistoryEntry,
@@ -30,6 +31,8 @@ interface GuestData {
   history: SearchHistoryEntry[]
   /** Points at the history entry shown on the Results tab. Clearing results only nulls this pointer. */
   activeHistoryId: string | null
+  /** Independent of results and history: clearing results never changes this, and turning it off deletes nothing. */
+  aiUpdates: boolean
 }
 
 const HISTORY_LIMIT = 50
@@ -41,7 +44,13 @@ interface DB {
   events: TrackEvent[]
   searches: SearchLog[]
   guests: Map<string, GuestData>
+  changes: ResourceChange[]
+  /** Last published version of each listing, so republishing can be diffed into change records. */
+  snapshots: Map<string, Resource>
 }
+
+const publishedSnapshots = (resources: Iterable<Resource>) =>
+  new Map([...resources].filter((r) => r.status === 'published').map((r) => [r.id, structuredClone(r)]))
 
 const globalForStore = globalThis as unknown as { __consiDB?: DB }
 
@@ -53,6 +62,8 @@ function seed(): DB {
     events: [],
     searches: [],
     guests: new Map(),
+    changes: [],
+    snapshots: publishedSnapshots(SAMPLE_RESOURCES),
   }
   const now = Date.now()
   const day = 86400000
@@ -97,6 +108,9 @@ function seed(): DB {
 }
 
 export const db: DB = globalForStore.__consiDB ?? (globalForStore.__consiDB = seed())
+// Stores created before the change log existed (kept across hot reloads) lack these fields.
+db.changes ??= []
+db.snapshots ??= publishedSnapshots(db.resources.values())
 
 export function newId(prefix: string) {
   return `${prefix}_${crypto.randomUUID().slice(0, 8)}`
@@ -105,12 +119,13 @@ export function newId(prefix: string) {
 export function guest(id: string): GuestData {
   let g = db.guests.get(id)
   if (!g) {
-    g = { saved: [], reminders: [], prefs: null, history: [], activeHistoryId: null }
+    g = { saved: [], reminders: [], prefs: null, history: [], activeHistoryId: null, aiUpdates: false }
     db.guests.set(id, g)
   }
-  // Guests created before search history existed (kept across hot reloads) lack these fields.
+  // Guests created before these features existed (kept across hot reloads) lack these fields.
   g.history ??= []
   g.activeHistoryId ??= null
+  g.aiUpdates ??= false
   return g
 }
 

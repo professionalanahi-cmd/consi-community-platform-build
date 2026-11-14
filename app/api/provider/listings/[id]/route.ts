@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { handle, HttpError } from '@/lib/server/http'
+import { recordListingStatus } from '@/lib/server/changes'
 import { listingInput, toResourceFields } from '@/lib/server/listings'
 import { requireRole } from '@/lib/server/session'
 import { db, logReview } from '@/lib/server/store'
@@ -16,6 +17,8 @@ export const PATCH = handle(async (req: Request, ctx: { params: Promise<{ id: st
   if (!r || r.providerId !== providerId) throw new HttpError(404, 'Listing not found')
   const { action, fields } = schema.parse(await req.json())
   const now = new Date().toISOString()
+  const wasPublished = r.status === 'published'
+  const providerSource = `${db.providers.get(providerId!)?.name ?? r.organization} (listing provider)`
 
   switch (action) {
     case 'update': {
@@ -38,15 +41,18 @@ export const PATCH = handle(async (req: Request, ctx: { params: Promise<{ id: st
       if (r.status !== 'published') throw new HttpError(400, 'Only published listings can be paused')
       r.status = 'paused'
       logReview(id, 'provider', 'paused')
+      recordListingStatus(r, 'listed', 'paused', providerSource)
       break
     case 'resume':
       if (r.status !== 'paused') throw new HttpError(400, 'Listing is not paused')
       r.status = 'published'
       logReview(id, 'provider', 'resumed')
+      recordListingStatus(r, 'paused', 'listed', providerSource)
       break
     case 'withdraw':
       r.status = 'removed'
       logReview(id, 'provider', 'withdrawn')
+      if (wasPublished) recordListingStatus(r, 'listed', 'removed', providerSource)
       break
   }
   r.updatedAt = now

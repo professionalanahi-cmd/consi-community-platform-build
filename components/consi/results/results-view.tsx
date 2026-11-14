@@ -12,6 +12,7 @@ import type { SearchResponse } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useApp } from '../app-provider'
 import { Orb } from '../orb'
+import { AiUpdates } from './ai-updates'
 import { ClearResultsToggle } from './clear-results-toggle'
 import { FiltersPanel } from './filters-panel'
 import { FollowUpCard } from './follow-up-card'
@@ -193,6 +194,8 @@ export function ResultsView() {
           </>
         )}
       </div>
+
+      {data && <AiUpdates watchKey={`${search.historyId ?? ''}-${search.nonce}-${data.results.length}`} />}
 
       {data && <ClearResultsToggle onConfirm={clearResults} />}
     </div>

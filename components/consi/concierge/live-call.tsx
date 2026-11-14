@@ -17,7 +17,7 @@ export function LiveCall(props: { session: Session; onEnd: () => void; onSeeResu
 }
 
 function LiveCallInner({ session, onEnd, onSeeResults, onShowMe }: { session: Session; onEnd: () => void; onSeeResults: (q: string) => void; onShowMe: (target: string) => void }) {
-  const { t, lang, prefs, location } = useApp()
+  const { t, lang, prefs, location, search } = useApp()
   const [lines, setLines] = useState<ChatLine[]>([])
   const [voiceOn, setVoiceOn] = useState(prefs.voiceEnabled)
   const [failed, setFailed] = useState(false)
@@ -57,7 +57,8 @@ function LiveCallInner({ session, onEnd, onSeeResults, onShowMe }: { session: Se
         convo.startSession({
           ...base,
           overrides: { agent: { language: LANGUAGE_META[lang].htmlLang.slice(0, 2) } },
-          dynamicVariables: { zip: location?.zip ?? '', language: LANGUAGE_META[lang].english },
+          // last_query tells the agent what is on the resident's screen, so follow-ups like "which one is closest?" work.
+          dynamicVariables: { zip: location?.zip ?? '', language: LANGUAGE_META[lang].english, last_query: search?.query ?? '' },
         } as Parameters<typeof convo.startSession>[0]),
       )
       .catch(() => setFailed(true))

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { LANGUAGE_META } from '@/lib/i18n'
 import { LANGUAGES, type SearchFilters } from '@/lib/types'
 import { useApp } from '../app-provider'
-import { Pills } from '../pills'
+import { SelectField } from '../select-field'
 
 const RADII = [1, 3, 5, 10, 25]
 
@@ -25,39 +25,31 @@ export function FiltersPanel({ onClose }: { onClose: () => void }) {
       className="flex flex-col gap-4 rounded-[1.75rem] bg-card p-5 ring-1 ring-border"
       aria-label={t('results.refine')}
     >
-      <div className="flex flex-col gap-4">
-        <Field label={t('filters.distance')}>
-          <Pills label={t('filters.distance')} value={radius} onChange={setRadius} options={RADII.map((r) => ({ value: r, label: t('filters.miles', { n: r }) }))} />
-        </Field>
-        <Field label={t('filters.cost')}>
-          <Pills
-            label={t('filters.cost')}
-            value={filters.cost ?? 'any'}
-            onChange={(v) => set('cost', v)}
-            options={[
-              { value: 'any', label: t('filters.any') },
-              { value: 'free', label: t('cost.free') },
-              { value: 'subsidized', label: t('cost.subsidized') },
-              { value: 'paid', label: t('cost.paid') },
-            ]}
-          />
-        </Field>
-        <Field label={t('filters.age')}>
-          <Pills
-            label={t('filters.age')}
-            value={filters.ageGroup ?? 'any'}
-            onChange={(v) => set('ageGroup', v)}
-            options={[{ value: 'any' as const, label: t('filters.any') }, ...(['child', 'teen', 'adult', 'senior'] as const).map((a) => ({ value: a, label: t(`age.${a}`) }))]}
-          />
-        </Field>
-        <Field label={t('filters.language')}>
-          <Pills
-            label={t('filters.language')}
-            value={filters.language ?? 'any'}
-            onChange={(v) => set('language', v)}
-            options={[{ value: 'any' as const, label: t('filters.any') }, ...LANGUAGES.map((l) => ({ value: l, label: LANGUAGE_META[l].native }))]}
-          />
-        </Field>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <SelectField label={t('filters.distance')} value={radius} onChange={setRadius} options={RADII.map((r) => ({ value: r, label: t('filters.miles', { n: r }) }))} />
+        <SelectField
+          label={t('filters.cost')}
+          value={filters.cost ?? 'any'}
+          onChange={(v) => set('cost', v)}
+          options={[
+            { value: 'any', label: t('filters.any') },
+            { value: 'free', label: t('cost.free') },
+            { value: 'subsidized', label: t('cost.subsidized') },
+            { value: 'paid', label: t('cost.paid') },
+          ]}
+        />
+        <SelectField
+          label={t('filters.age')}
+          value={filters.ageGroup ?? 'any'}
+          onChange={(v) => set('ageGroup', v)}
+          options={[{ value: 'any' as const, label: t('filters.any') }, ...(['child', 'teen', 'adult', 'senior'] as const).map((a) => ({ value: a, label: t(`age.${a}`) }))]}
+        />
+        <SelectField
+          label={t('filters.language')}
+          value={filters.language ?? 'any'}
+          onChange={(v) => set('language', v)}
+          options={[{ value: 'any' as const, label: t('filters.any') }, ...LANGUAGES.map((l) => ({ value: l, label: LANGUAGE_META[l].native }))]}
+        />
       </div>
       <fieldset className="flex flex-col gap-2">
         <legend className="sr-only">{t('results.refine')}</legend>
@@ -82,15 +74,6 @@ export function FiltersPanel({ onClose }: { onClose: () => void }) {
         </button>
       </div>
     </form>
-  )
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-2">
-      <span className="text-base font-semibold">{label}</span>
-      {children}
-    </div>
   )
 }
 

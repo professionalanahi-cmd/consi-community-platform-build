@@ -1,7 +1,7 @@
 'use client'
 
 import { AlertTriangle } from 'lucide-react'
-import { Pills } from '../pills'
+import { SelectField } from '../select-field'
 import { useState } from 'react'
 import { LANGUAGE_META } from '@/lib/i18n'
 import { CATEGORIES, LANGUAGES } from '@/lib/types'
@@ -119,8 +119,9 @@ export function ListingForm({ initial, onDone, onCancel }: { initial: ListingDra
           </div>
         </fieldset>
         <Field flagged={flag('cost')} label="Cost">
-          <Pills
+          <SelectField
             label="Cost"
+            hideLabel
             value={d.cost}
             onChange={(v) => set('cost', v)}
             options={[
@@ -176,8 +177,9 @@ export function ListingForm({ initial, onDone, onCancel }: { initial: ListingDra
           <input className={input} placeholder="Tue & Thu, 5–7 PM" value={d.schedule} onChange={(e) => set('schedule', e.target.value)} />
         </Field>
         <Field flagged={flag('availability')} label="Availability">
-          <Pills
+          <SelectField
             label="Availability"
+            hideLabel
             value={d.availability}
             onChange={(v) => set('availability', v)}
             options={[

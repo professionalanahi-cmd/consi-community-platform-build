@@ -1,7 +1,7 @@
 'use client'
 
 import { Building2, ShieldCheck } from 'lucide-react'
-import { Pills } from '../pills'
+import { SelectField } from '../select-field'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
@@ -30,10 +30,7 @@ export function RoleChooser({ providers }: { providers: { id: string; name: stri
           <Building2 className="size-8 text-accent-foreground" aria-hidden="true" />
           <h2 className="font-heading text-2xl font-semibold">Program provider</h2>
           <p className="text-base leading-relaxed text-muted-foreground">Upload flyers, review what CONSI extracted, submit listings, and see how residents find you.</p>
-          <div className="flex flex-col gap-2">
-            <span className="text-base font-medium">Organization</span>
-            <Pills label="Organization" value={providerId} onChange={setProviderId} options={providers.map((p) => ({ value: p.id, label: `${p.name} (${p.status})` }))} className="flex-col [&>button]:w-full [&>button]:rounded-2xl [&>button]:py-2 [&>button]:text-left" />
-          </div>
+          <SelectField label="Organization" value={providerId} onChange={setProviderId} options={providers.map((p) => ({ value: p.id, label: `${p.name} (${p.status})` }))} />
           <button type="button" onClick={() => enter('provider')} className="mt-auto min-h-12 rounded-full bg-primary px-5 text-lg font-semibold text-primary-foreground">
             Enter as provider
           </button>

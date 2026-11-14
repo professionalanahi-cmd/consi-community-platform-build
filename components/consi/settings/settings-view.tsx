@@ -6,7 +6,8 @@ import { LANGUAGES, type Preferences } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useApp } from '../app-provider'
 import { PageHeader } from '../page-header'
-import { Pills } from '../pills'
+import { Segmented } from '../segmented'
+import { SelectField } from '../select-field'
 
 export function SettingsView() {
   const { t, prefs, updatePrefs, resetPrefs } = useApp()
@@ -24,40 +25,25 @@ export function SettingsView() {
 
       <Section title={t('settings.language')} guide="language">
         <p className="text-base text-muted-foreground">{t('settings.languageHint')}</p>
-        <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('settings.language')}>
-          {LANGUAGES.map((l) => (
-            <button
-              key={l}
-              type="button"
-              role="radio"
-              aria-checked={prefs.language === l}
-              lang={LANGUAGE_META[l].htmlLang}
-              onClick={() => set({ language: l })}
-              className={cn('min-h-14 rounded-2xl px-4 text-lg font-semibold ring-1', prefs.language === l ? 'bg-primary text-primary-foreground ring-primary' : 'bg-card ring-border')}
-            >
-              {LANGUAGE_META[l].native}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          label={t('settings.language')}
+          value={prefs.language}
+          onChange={(l) => set({ language: l })}
+          options={LANGUAGES.map((l) => ({ value: l, label: LANGUAGE_META[l].native, lang: LANGUAGE_META[l].htmlLang }))}
+          className="!grid-cols-2 [&>button]:min-h-14 [&>button]:text-lg"
+        />
       </Section>
 
       <Section title={t('settings.accessibility')} guide="text-size">
         <fieldset className="flex flex-col gap-2">
           <legend className="mb-2 text-lg font-semibold">{t('settings.textSize')}</legend>
-          <div className="grid grid-cols-3 gap-2">
-            {(['normal', 'large', 'xlarge'] as const).map((s, i) => (
-              <button
-                key={s}
-                type="button"
-                aria-pressed={prefs.textSize === s}
-                onClick={() => set({ textSize: s })}
-                className={cn('min-h-14 rounded-2xl font-semibold ring-1', prefs.textSize === s ? 'bg-primary text-primary-foreground ring-primary' : 'bg-card ring-border')}
-                style={{ fontSize: `${1 + i * 0.2}rem` }}
-              >
-                {t(`settings.${s}` as 'settings.normal')}
-              </button>
-            ))}
-          </div>
+          <Segmented
+            label={t('settings.textSize')}
+            value={prefs.textSize}
+            onChange={(v) => set({ textSize: v })}
+            options={(['normal', 'large', 'xlarge'] as const).map((v, i) => ({ value: v, label: t(`settings.${v}` as 'settings.normal'), style: { fontSize: `${1 + i * 0.15}rem` } }))}
+            className="[&>button]:min-h-14"
+          />
         </fieldset>
         <Toggle label={t('settings.highContrast')} checked={prefs.highContrast} onChange={(v) => set({ highContrast: v })} />
         <Toggle label={t('settings.reducedMotion')} checked={prefs.reducedMotion} onChange={(v) => set({ reducedMotion: v })} />
@@ -80,10 +66,7 @@ export function SettingsView() {
 
       <Section title={t('settings.location')}>
         <Toggle label={t('settings.deviceLocation')} checked={prefs.useDeviceLocation} onChange={(v) => set({ useDeviceLocation: v })} />
-        <div className="flex flex-col gap-2">
-          <span className="text-lg font-semibold">{t('settings.radius')}</span>
-          <Pills label={t('settings.radius')} value={prefs.defaultRadius} onChange={(v) => set({ defaultRadius: v })} options={[2, 5, 10, 25].map((m) => ({ value: m, label: t('filters.miles', { n: m }) }))} />
-        </div>
+        <SelectField label={t('settings.radius')} value={prefs.defaultRadius} onChange={(v) => set({ defaultRadius: v })} options={[2, 5, 10, 25].map((m) => ({ value: m, label: t('filters.miles', { n: m }) }))} className="[&>label]:text-lg" />
       </Section>
 
       <Section title={t('settings.privacy')}>

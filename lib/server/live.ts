@@ -170,17 +170,24 @@ export async function liveReferral(resourceId: string) {
 }
 
 /** Typed concierge turn: run the engine's search for the need, then its grounded concierge reply. */
-export async function liveConcierge(lang: Lang, zip: string | undefined, messages: { role: 'user' | 'assistant'; content: string }[]) {
+export async function liveConcierge(lang: Lang, zip: string | undefined, messages: { role: 'user' | 'assistant'; content: string }[], lastQuery?: string) {
   const last = [...messages].reverse().find((m) => m.role === 'user')?.content ?? ''
   const geo = await resolveLocation(zip ? { zip } : null)
-  const s = await api<LiveSearch>('/api/search', { method: 'POST', body: JSON.stringify({ query: last, lang, location: { lat: geo.lat, lon: geo.lng } }) })
+  const find = (query: string) => api<LiveSearch & { interpreted: { category: string | null } }>('/api/search', { method: 'POST', body: JSON.stringify({ query, lang, location: { lat: geo.lat, lon: geo.lng } }) })
+  let s = await find(last)
+  let shown = last
+  // A follow-up such as "which is closest?" names no need of its own: answer it about the resident's last search.
+  if (lastQuery?.trim() && lastQuery.trim() !== last.trim() && (!s.interpreted.category || s.results.length === 0)) {
+    s = await find(lastQuery)
+    shown = lastQuery
+  }
   const usable = s.mode !== 'fixture' ? s.results : []
   usable.forEach((r, i) => toRecommendation(r, i))
   const c = await api<{ reply: string }>('/api/concierge', {
     method: 'POST',
     body: JSON.stringify({ message: last, lang, context: { searchId: s.searchId, visibleResourceIds: usable.map((r) => r.id) } }),
   }, 12000)
-  return { reply: c.reply, search: usable.length ? { query: last, results: usable.map((r) => ({ id: r.id, name: r.name })) } : null, guide: null }
+  return { reply: c.reply, search: usable.length ? { query: shown, results: usable.map((r) => ({ id: r.id, name: r.name })) } : null, guide: null }
 }
 
 /** Publish an approved listing into the engine so residents can find it in any language. Needs CONCIERGE_ADMIN_TOKEN. */

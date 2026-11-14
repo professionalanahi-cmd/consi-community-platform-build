@@ -11,6 +11,7 @@ const GUIDE_TARGETS = ['search', 'dictate', 'location', 'refine', 'view-toggle',
 const schema = z.object({
   lang: z.enum(LANGUAGES),
   zip: z.string().regex(/^\d{5}$/).optional(),
+  lastQuery: z.string().max(500).optional(),
   messages: z
     .array(z.object({ role: z.enum(['user', 'assistant']), content: z.string().max(2000) }))
     .min(1)
@@ -22,11 +23,11 @@ const schema = z.object({
  * Runs the same resource search the app uses, so it never invents programs.
  */
 export const POST = handle(async (req: Request) => {
-  const { lang, zip, messages } = schema.parse(await req.json())
+  const { lang, zip, lastQuery, messages } = schema.parse(await req.json())
   // Live engine: grounded reply from stored facts (Claude Sonnet). Falls through to the local model on failure.
   if (liveEnabled()) {
     try {
-      return await liveConcierge(lang, zip, messages)
+      return await liveConcierge(lang, zip, messages, lastQuery)
     } catch (e) {
       console.error('[concierge] live engine unavailable', e)
     }

@@ -7,7 +7,7 @@ import { useApp } from '../app-provider'
 import { CallShell, type ChatLine } from './call-shell'
 
 export function DemoCall({ onEnd, onSeeResults, onShowMe, reason }: { onEnd: () => void; onSeeResults: (q: string) => void; onShowMe: (target: string) => void; reason?: string }) {
-  const { t, lang, prefs, location } = useApp()
+  const { t, lang, prefs, location, search } = useApp()
   const speech = LANGUAGE_META[lang].speech
   const [lines, setLines] = useState<ChatLine[]>(() => [{ id: 'hello', role: 'assistant', text: t('cc.hello') }])
   const [thinking, setThinking] = useState(false)
@@ -29,6 +29,8 @@ export function DemoCall({ onEnd, onSeeResults, onShowMe, reason }: { onEnd: () 
           body: JSON.stringify({
             lang,
             zip: location?.zip,
+            // What the resident last searched, so follow-ups ("which is closest?") are answered about the results on screen.
+            lastQuery: search?.query,
             messages: next.filter((l) => l.id !== 'hello').slice(-20).map((l) => ({ role: l.role, content: l.text })),
           }),
         })
@@ -42,7 +44,7 @@ export function DemoCall({ onEnd, onSeeResults, onShowMe, reason }: { onEnd: () 
         setThinking(false)
       }
     },
-    [cancel, lang, location?.zip, speak, t, voiceOn],
+    [cancel, lang, location?.zip, search?.query, speak, t, voiceOn],
   )
 
   const dictation = useDictation(speech, (finalText) => {

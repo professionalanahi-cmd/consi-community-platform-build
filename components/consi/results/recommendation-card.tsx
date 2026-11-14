@@ -151,7 +151,7 @@ export function RecommendationCard({
           {r.schedule && <Detail label={t('results.schedule')} value={r.schedule} />}
           {r.deadline && <Detail label={t('results.deadline')} value={formatDate(r.deadline, lang)} />}
           {r.startDate && <Detail label={t('results.starts')} value={formatDate(r.startDate, lang)} />}
-          <Detail label={t('results.registration')} value={r.registrationRequired ? t('results.registration') : t('results.noRegistration')} />
+          {r.registrationRequired != null && <Detail label={t('results.registration')} value={r.registrationRequired ? t('results.registration') : t('results.noRegistration')} />}
           {r.availability === 'waitlist' && <Detail label={t('filters.availability')} value={t('results.waitlist')} />}
           <Detail label={t('results.languages')} value={r.languages.map((l) => LANGUAGE_META[l].native).join(', ')} />
           {r.accessibility.length > 0 && <Detail label={t('results.access')} value={r.accessibility.join(', ')} />}

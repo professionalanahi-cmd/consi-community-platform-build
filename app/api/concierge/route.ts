@@ -2,6 +2,7 @@ import { generateText, isStepCount, tool } from 'ai'
 import { z } from 'zod'
 import { LANGUAGE_META } from '@/lib/i18n'
 import { handle } from '@/lib/server/http'
+import { liveConcierge, liveEnabled } from '@/lib/server/live'
 import { AI_MODEL, search } from '@/lib/server/matching'
 import { LANGUAGES } from '@/lib/types'
 
@@ -22,6 +23,14 @@ const schema = z.object({
  */
 export const POST = handle(async (req: Request) => {
   const { lang, zip, messages } = schema.parse(await req.json())
+  // Live engine: grounded reply from stored facts (Claude Sonnet). Falls through to the local model on failure.
+  if (liveEnabled()) {
+    try {
+      return await liveConcierge(lang, zip, messages)
+    } catch (e) {
+      console.error('[concierge] live engine unavailable', e)
+    }
+  }
   let lastSearch: { query: string; results: { id: string; name: string }[] } | null = null
   let guide: (typeof GUIDE_TARGETS)[number] | null = null
 

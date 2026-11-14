@@ -16,7 +16,8 @@ export const CATEGORIES = [
 ] as const
 export type Category = (typeof CATEGORIES)[number]
 
-export type CostType = 'free' | 'subsidized' | 'paid'
+/** 'unknown' = the source does not state a price (live records only). */
+export type CostType = 'free' | 'subsidized' | 'paid' | 'unknown'
 export type AgeGroup = 'child' | 'teen' | 'adult' | 'senior'
 
 /** Lifecycle of a listing. Only `published` listings are visible to residents. */
@@ -80,7 +81,8 @@ export interface Resource {
   languages: Lang[]
   accessibility: string[]
   transitNearby: boolean
-  registrationRequired: boolean
+  /** null = not stated by the source. */
+  registrationRequired: boolean | null
   availability: 'open' | 'waitlist' | 'seasonal' | 'closed'
   schedule?: string
   deadline?: string

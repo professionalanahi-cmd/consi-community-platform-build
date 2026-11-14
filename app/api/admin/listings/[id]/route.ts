@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { handle, HttpError } from '@/lib/server/http'
 import { autoTranslate } from '@/lib/server/listings'
+import { livePublish } from '@/lib/server/live'
 import { requireRole } from '@/lib/server/session'
 import { db, logReview } from '@/lib/server/store'
 import type { ListingStatus } from '@/lib/types'
@@ -33,7 +34,9 @@ export const PATCH = handle(async (req: Request, ctx: { params: Promise<{ id: st
     r.verification = 'verified'
     r.lastVerified = now
     r.source = 'Provider submission, verified by CONSI admin'
-    r.translations = await autoTranslate(r)
+    r.translations = await autoTranslate(r).catch(() => r.translations)
+    // Publish into the live engine too, so residents find it in search in any language.
+    await livePublish(r)
   } else if (action === 'mark_verified') {
     r.verification = 'verified'
     r.lastVerified = now

@@ -229,7 +229,7 @@ export async function liveExtract(text: string) {
       20000,
     )
     const d = out.draft as Record<string, string | string[] | null | undefined>
-    const str = (k: string) => (typeof d[k] === 'string' && d[k] ? (d[k] as string) : null)
+    const str = (k: string) => (typeof d[k] === 'string' && d[k] && !/^(unknown|n\/?a|none|null)$/i.test((d[k] as string).trim()) ? (d[k] as string).trim() : null)
     const address = str('address')
     const cost = str('costStatus')
     const FIELD: Record<string, string> = { description: 'summary', costStatus: 'cost', hours: 'schedule', eligibilitySummary: 'eligibilityText', actionUrl: 'website', audience: 'ageGroups' }
@@ -240,11 +240,17 @@ export async function liveExtract(text: string) {
       categories: CATEGORY[str('category') ?? ''] ?? [],
       cost: cost === 'free' ? ('free' as const) : cost === 'low' ? ('subsidized' as const) : cost === 'paid' ? ('paid' as const) : null,
       costDetail: str('costNote'),
-      ageGroups: [] as ('child' | 'teen' | 'adult' | 'senior')[],
+      // Read only from the flyer's own stated audience; still listed under uncertainFields for the provider to confirm.
+      ageGroups: ([
+        [/senior|older adult|elder|55\+|60\+|65\+/i, 'senior'],
+        [/teen|youth|high school/i, 'teen'],
+        [/child|kid|toddler|preschool|infant/i, 'child'],
+        [/adult/i, 'adult'],
+      ] as [RegExp, 'child' | 'teen' | 'adult' | 'senior'][]).filter(([re]) => re.test(str('audience') ?? '')).map(([, g]) => g).slice(0, 2),
       eligibilityText: str('eligibilitySummary'),
       address: address ? address.split(',')[0].trim() : null,
-      city: str('city'),
-      zip: address?.match(/\b9\d{4}\b/)?.[0] ?? null,
+      city: (str('city') ?? '').split(',')[0].trim() || null,
+      zip: `${address ?? ''} ${str('city') ?? ''} ${text}`.match(/\b9\d{4}\b/)?.[0] ?? null,
       phone: str('phone'),
       email: str('email'),
       website: str('actionUrl') ?? str('url'),
@@ -255,7 +261,7 @@ export async function liveExtract(text: string) {
       registrationRequired: null,
       sourceLanguage: 'en' as const,
       rawText: text,
-      uncertainFields: [...new Set(out.missing.filter((m) => m !== 'lat' && m !== 'lon').map((m) => FIELD[m] ?? m).concat(['ageGroups', 'zip']))],
+      uncertainFields: [...new Set(out.missing.filter((m) => m !== 'lat' && m !== 'lon').map((m) => FIELD[m] ?? m).concat(['ageGroups']))],
     }
   } catch (e) {
     console.error('[live] extract failed', e)

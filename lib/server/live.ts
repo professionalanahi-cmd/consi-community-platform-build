@@ -219,14 +219,14 @@ export async function livePublish(r: Resource): Promise<string | null> {
 }
 
 /** Flyer text -> draft fields, using the engine's extractor (Claude Haiku). Returns null if unavailable. */
-export async function liveExtract(text: string) {
+export async function liveExtract(text: string, file?: { mediaType: string; data: string }) {
   const token = process.env.CONCIERGE_ADMIN_TOKEN
-  if (!liveEnabled() || !token || text.trim().length < 20) return null
+  if (!liveEnabled() || !token || (!file && text.trim().length < 20)) return null
   try {
     const out = await api<{ draft: Record<string, unknown>; missing: string[] }>(
       '/api/admin/ingest',
-      { method: 'POST', body: JSON.stringify({ text }), headers: { 'x-admin-token': token } },
-      20000,
+      { method: 'POST', body: JSON.stringify(file ? { text, file } : { text }), headers: { 'x-admin-token': token } },
+      file ? 28000 : 20000,
     )
     const d = out.draft as Record<string, string | string[] | null | undefined>
     const str = (k: string) => (typeof d[k] === 'string' && d[k] && !/^(unknown|n\/?a|none|null)$/i.test((d[k] as string).trim()) ? (d[k] as string).trim() : null)

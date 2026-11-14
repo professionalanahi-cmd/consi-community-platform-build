@@ -6,6 +6,8 @@ import { AI_MODEL } from '@/lib/server/matching'
 import { requireRole } from '@/lib/server/session'
 import { CATEGORIES, LANGUAGES } from '@/lib/types'
 
+export const maxDuration = 60
+
 const MAX_BYTES = 6 * 1024 * 1024
 const ALLOWED = ['image/png', 'image/jpeg', 'image/webp', 'application/pdf', 'text/plain']
 
@@ -61,6 +63,11 @@ export const POST = handle(async (req: Request) => {
   const plain = content.slice(1).every((c) => c.type === 'text') ? content.slice(1).map((c) => (c.type === 'text' ? c.text : '')).join('\n') : ''
   if (plain) {
     const fields = await liveExtract(plain.replace(/^Flyer text:\n/, ''))
+    if (fields) return { fields, flyer }
+  } else if (file instanceof File && file.size > 0 && file.size <= 4 * 1024 * 1024) {
+    // Photo or PDF of a flyer: the live engine reads it with Claude vision.
+    const data = Buffer.from(await file.arrayBuffer()).toString('base64')
+    const fields = await liveExtract(pasted, { mediaType: file.type, data })
     if (fields) return { fields, flyer }
   }
 

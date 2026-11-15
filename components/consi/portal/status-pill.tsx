@@ -1,5 +1,8 @@
+'use client'
+
 import type { ListingStatus } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { useApp } from '../app-provider'
 
 const TONE: Record<ListingStatus, string> = {
   draft: 'bg-muted text-foreground',
@@ -14,5 +17,6 @@ const TONE: Record<ListingStatus, string> = {
 }
 
 export function StatusPill({ status }: { status: ListingStatus }) {
-  return <span className={cn('inline-flex h-7 items-center rounded-full px-3 text-sm font-semibold capitalize', TONE[status])}>{status.replace('_', ' ')}</span>
+  const { t } = useApp()
+  return <span className={cn('inline-flex h-7 items-center rounded-full px-3 text-sm font-semibold', TONE[status])}>{t(`portal.lstatus.${status}`)}</span>
 }

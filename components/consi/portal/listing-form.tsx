@@ -116,7 +116,7 @@ export function ListingForm({ initial, onDone, onCancel }: { initial: ListingDra
         e.preventDefault()
         save(true)
       }}
-      className="flex flex-col gap-6 rounded-[1.75rem] bg-card p-6 shadow-sm"
+      className="flex flex-col gap-6 rounded-[1.75rem] bg-card p-5 shadow-sm sm:p-6"
     >
       <div className="flex flex-col gap-1">
         <h2 className="font-heading text-2xl font-semibold">{t('portal.form.title')}</h2>
@@ -216,7 +216,7 @@ export function ListingForm({ initial, onDone, onCancel }: { initial: ListingDra
             ]}
           />
         </Field>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-4 min-[30rem]:grid-cols-2">
           <Field flagged={flag('startDate')} label={t('portal.form.startDate')}>
             <input type="date" className={input} value={d.startDate} onChange={(e) => set('startDate', e.target.value)} />
           </Field>

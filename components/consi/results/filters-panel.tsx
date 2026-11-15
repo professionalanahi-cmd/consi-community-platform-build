@@ -25,7 +25,7 @@ export function FiltersPanel({ onClose }: { onClose: () => void }) {
       className="flex flex-col gap-4 rounded-[1.75rem] bg-card p-5 ring-1 ring-border"
       aria-label={t('results.refine')}
     >
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <SelectField label={t('filters.distance')} value={radius} onChange={setRadius} options={RADII.map((r) => ({ value: r, label: t('filters.miles', { n: r }) }))} />
         <SelectField
           label={t('filters.cost')}
@@ -51,7 +51,7 @@ export function FiltersPanel({ onClose }: { onClose: () => void }) {
           options={[{ value: 'any' as const, label: t('filters.any') }, ...LANGUAGES.map((l) => ({ value: l, label: LANGUAGE_META[l].native }))]}
         />
       </div>
-      <fieldset className="flex flex-col gap-2">
+      <fieldset className="grid gap-x-4 gap-y-2 sm:grid-cols-2 xl:grid-cols-4">
         <legend className="sr-only">{t('results.refine')}</legend>
         <Check label={t('filters.openNow')} checked={filters.availability === 'open'} onChange={(v) => set('availability', v ? 'open' : 'any')} />
         <Check label={t('filters.accessible')} checked={!!filters.accessible} onChange={(v) => set('accessible', v)} />
@@ -59,7 +59,7 @@ export function FiltersPanel({ onClose }: { onClose: () => void }) {
         <Check label={t('filters.noRegistration')} checked={!!filters.noRegistration} onChange={(v) => set('noRegistration', v)} />
       </fieldset>
       <div className="flex gap-2">
-        <button type="submit" className="min-h-12 flex-1 rounded-full bg-primary px-5 text-base font-semibold text-primary-foreground">
+        <button type="submit" className="min-h-12 flex-1 rounded-full bg-primary px-5 text-base font-semibold text-primary-foreground md:flex-none md:px-10">
           {t('filters.apply')}
         </button>
         <button

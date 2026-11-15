@@ -23,7 +23,7 @@ export function RoleChooser({ providers }: { providers: Pick<Provider, 'id' | 'n
   return (
     <div className="flex flex-col gap-8">
       <div className="flex max-w-2xl flex-col gap-3">
-        <h1 className="font-heading text-4xl font-bold text-balance">{t('portal.roles.title')}</h1>
+        <h1 className="font-heading text-3xl font-bold text-balance sm:text-4xl">{t('portal.roles.title')}</h1>
         <p className="text-lg leading-relaxed text-muted-foreground text-pretty">{t('portal.roles.intro')}</p>
       </div>
       <div className="grid gap-5 md:grid-cols-2">

@@ -16,7 +16,9 @@ import { FiltersPanel } from './filters-panel'
 import { FollowUpCard } from './follow-up-card'
 import { RecommendationCard } from './recommendation-card'
 
-const ResultsMap = dynamic(() => import('./results-map'), { ssr: false, loading: () => <div className="h-[min(24rem,52dvh)] animate-pulse rounded-3xl bg-muted" /> })
+const MAP_SIZE = 'h-[min(24rem,52dvh)] md:h-[min(30rem,52dvh)] lg:h-[calc(100dvh-9rem)] lg:max-h-[46rem]'
+
+const ResultsMap = dynamic(() => import('./results-map'), { ssr: false, loading: () => <div className={cn(MAP_SIZE, 'animate-pulse rounded-3xl bg-muted')} /> })
 
 const postJSON = <T,>(url: string, body: unknown) =>
   fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then(async (r) => {
@@ -96,8 +98,8 @@ export function ResultsView() {
           <LanguageSelector />
         </div>
         <p className="text-base font-medium text-muted-foreground">{t('results.youAsked')}</p>
-        <h1 className="font-heading text-2xl font-semibold leading-snug text-balance">{`“${search.query}”`}</h1>
-        {data && <p className="text-lg leading-relaxed text-pretty">{data.interpretation.summary}</p>}
+        <h1 className="max-w-3xl font-heading text-2xl font-semibold leading-snug text-balance md:text-3xl md:leading-snug">{`“${search.query}”`}</h1>
+        {data && <p className="max-w-3xl text-lg leading-relaxed text-pretty">{data.interpretation.summary}</p>}
       </header>
 
       {data?.followUp && (
@@ -170,32 +172,35 @@ export function ResultsView() {
             ) : (
               <>
                 <p className="text-base text-muted-foreground">{t('results.showing', { shown: data.results.length, total: data.total })}</p>
-                {view === 'map' && (
-                  <div className="flex flex-col gap-2">
-                    <ResultsMap results={data.results} origin={data.origin} milesLabel={(n) => t('results.miles', { n: n.toFixed(1) })} />
-                    <p className="text-sm text-muted-foreground">{t('results.mapList')}</p>
-                  </div>
-                )}
-                <ol className="flex flex-col gap-4">
-                  {data.results.map((rec, i) => (
-                    <li key={rec.resource.id}>
-                      <RecommendationCard
-                        rec={rec}
-                        index={i}
-                        saved={savedIds.has(rec.resource.id)}
-                        onToggleSave={() => toggleSave(rec.resource.id)}
-                        reminded={remindedIds.has(rec.resource.id)}
-                        onRemind={() => remind(rec)}
-                      />
-                    </li>
-                  ))}
-                </ol>
+                {/* Wide screens: cards flow in two columns, or sit beside a map that stays in view while the list scrolls. */}
+                <div className={cn('flex flex-col gap-4', view === 'map' && 'lg:grid lg:grid-cols-2 lg:items-start lg:gap-6')}>
+                  {view === 'map' && (
+                    <div className="isolate flex flex-col gap-2 lg:sticky lg:top-8">
+                      <ResultsMap className={MAP_SIZE} results={data.results} origin={data.origin} milesLabel={(n) => t('results.miles', { n: n.toFixed(1) })} />
+                      <p className="text-sm text-muted-foreground">{t('results.mapList')}</p>
+                    </div>
+                  )}
+                  <ol className={cn('grid items-start gap-4', view === 'list' && 'md:grid-cols-2')}>
+                    {data.results.map((rec, i) => (
+                      <li key={rec.resource.id} className="min-w-0">
+                        <RecommendationCard
+                          rec={rec}
+                          index={i}
+                          saved={savedIds.has(rec.resource.id)}
+                          onToggleSave={() => toggleSave(rec.resource.id)}
+                          reminded={remindedIds.has(rec.resource.id)}
+                          onRemind={() => remind(rec)}
+                        />
+                      </li>
+                    ))}
+                  </ol>
+                </div>
                 {data.page < data.pageCount && (
                   <button
                     type="button"
                     disabled={isLoading}
                     onClick={() => updateSearch({ page: search.page + 1 })}
-                    className="min-h-14 rounded-full bg-card text-lg font-semibold ring-1 ring-border hover:bg-muted disabled:opacity-60"
+                    className="min-h-14 rounded-full bg-card px-8 text-lg font-semibold ring-1 ring-border hover:bg-muted disabled:opacity-60 md:min-w-72 md:self-center"
                   >
                     {isLoading ? t('common.loading') : t('results.showMore')}
                   </button>

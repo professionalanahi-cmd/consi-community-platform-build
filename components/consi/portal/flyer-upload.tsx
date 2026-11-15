@@ -33,7 +33,7 @@ export function FlyerUpload({ onExtracted, onManual }: { onExtracted: (d: Listin
   }
 
   return (
-    <section className="flex flex-col gap-4 rounded-[1.75rem] bg-card p-6 shadow-sm">
+    <section className="flex flex-col gap-4 rounded-[1.75rem] bg-card p-5 shadow-sm sm:p-6">
       <h2 className="font-heading text-2xl font-semibold">{t('portal.flyer.title')}</h2>
       <p className="text-base leading-relaxed text-muted-foreground">{t('portal.flyer.body')}</p>
       <label className="flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-background p-4 text-center hover:bg-muted">

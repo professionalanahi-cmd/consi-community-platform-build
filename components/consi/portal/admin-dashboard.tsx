@@ -91,7 +91,7 @@ export function AdminDashboard() {
           <ArrowLeft className="size-5" aria-hidden="true" />
           {t('portal.backToRoles')}
         </Link>
-        <h1 className="font-heading text-4xl font-bold">{t('portal.admin.title')}</h1>
+        <h1 className="font-heading text-3xl font-bold text-balance sm:text-4xl">{t('portal.admin.title')}</h1>
         <ul className="flex flex-wrap gap-2" aria-label={t('portal.admin.integrations')}>
           {Object.entries(data.integrations).map(([k, v]) => (
             <li key={k} className="rounded-full bg-card px-3 py-1 text-sm ring-1 ring-border">
@@ -148,10 +148,10 @@ function Queue({ items, providers, act }: { items: Resource[]; providers: Provid
           r.deadline && t('portal.admin.deadline', { date: formatDate(r.deadline, lang) }),
         ].filter(Boolean)
         return (
-          <li key={r.id} className="flex flex-col gap-4 rounded-[1.75rem] bg-card p-6 shadow-sm">
+          <li key={r.id} className="flex flex-col gap-4 rounded-[1.75rem] bg-card p-5 shadow-sm sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h2 className="text-2xl font-semibold">{r.name}</h2>
+              <div className="min-w-0">
+                <h2 className="text-xl font-semibold text-pretty sm:text-2xl">{r.name}</h2>
                 <p className="text-base text-muted-foreground">
                   {r.organization}
                   {p && ` · ${t('portal.admin.providerIs', { status: t(`portal.pstatus.${p.status}`) })}`}
@@ -159,8 +159,8 @@ function Queue({ items, providers, act }: { items: Resource[]; providers: Provid
               </div>
               <StatusPill status={r.status} />
             </div>
-            <p className="text-base leading-relaxed">{r.summary}</p>
-            <dl className="grid gap-2 text-base sm:grid-cols-2">
+            <p className="max-w-3xl text-base leading-relaxed">{r.summary}</p>
+            <dl className="grid gap-x-6 gap-y-2 text-base sm:grid-cols-2 lg:grid-cols-3">
               <Row k={t('portal.admin.address')} v={`${r.location.address}, ${r.location.city} ${r.location.zip}`} />
               <Row k={t('portal.form.cost')} v={`${t(`cost.${r.cost}`)}${r.costDetail ? ` — ${r.costDetail}` : ''}`} />
               <Row k={t('portal.form.categories')} v={r.categories.map(category).join(', ')} />
@@ -200,7 +200,38 @@ function Queue({ items, providers, act }: { items: Resource[]; providers: Provid
 function Listings({ items, act }: { items: (Resource & { stats: Stats })[]; act: Act }) {
   const { t } = useApp()
   return (
-    <div className="overflow-x-auto rounded-[1.75rem] bg-card shadow-sm">
+    <>
+    {/* Phones and tablets get one card per listing; the five-column table needs laptop width. */}
+    <ul className="grid gap-4 md:grid-cols-2 lg:hidden">
+      {items.map((r) => (
+        <li key={r.id} className="flex flex-col gap-3 rounded-[1.75rem] bg-card p-5 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold text-pretty">{r.name}</h2>
+              <p className="text-sm text-muted-foreground">
+                {r.organization}
+                {r.isSample && ` · ${t('portal.admin.sample')}`}
+              </p>
+            </div>
+            <StatusPill status={r.status} />
+          </div>
+          <dl className="grid grid-cols-2 gap-3 rounded-2xl bg-background p-3 text-base">
+            <div className="flex flex-col">
+              <dt className="text-sm text-muted-foreground">{t('portal.admin.verification')}</dt>
+              <dd>{t(`portal.verif.${r.verification}`)}</dd>
+            </div>
+            <div className="flex flex-col">
+              <dt className="text-sm text-muted-foreground">{t('portal.admin.funnel')}</dt>
+              <dd className="tabular-nums">{`${r.stats.impressions} / ${r.stats.views} / ${r.stats.referrals}`}</dd>
+            </div>
+          </dl>
+          <div className="flex flex-wrap gap-2">
+            <ListingActions r={r} act={act} />
+          </div>
+        </li>
+      ))}
+    </ul>
+    <div className="hidden overflow-x-auto rounded-[1.75rem] bg-card shadow-sm lg:block">
       <table className="w-full min-w-[720px] text-left text-base">
         <thead className="border-b border-border text-sm text-muted-foreground">
           <tr>
@@ -230,10 +261,7 @@ function Listings({ items, act }: { items: (Resource & { stats: Stats })[]; act:
               <td className="p-4 tabular-nums">{`${r.stats.impressions} / ${r.stats.views} / ${r.stats.referrals}`}</td>
               <td className="p-4">
                 <div className="flex flex-wrap justify-end gap-2">
-                  {r.status === 'published' && <Btn onClick={() => act(r.id, 'pause')}>{t('portal.act.pause')}</Btn>}
-                  {r.status === 'paused' && <Btn onClick={() => act(r.id, 'unpause')}>{t('portal.act.unpause')}</Btn>}
-                  {r.verification !== 'verified' && <Btn onClick={() => act(r.id, 'mark_verified')}>{t('portal.act.verify')}</Btn>}
-                  {r.status !== 'suspended' && r.status !== 'removed' && <Btn onClick={() => act(r.id, 'suspend')}>{t('portal.act.suspend')}</Btn>}
+                  <ListingActions r={r} act={act} />
                 </div>
               </td>
             </tr>
@@ -241,6 +269,19 @@ function Listings({ items, act }: { items: (Resource & { stats: Stats })[]; act:
         </tbody>
       </table>
     </div>
+    </>
+  )
+}
+
+function ListingActions({ r, act }: { r: Resource; act: Act }) {
+  const { t } = useApp()
+  return (
+    <>
+      {r.status === 'published' && <Btn onClick={() => act(r.id, 'pause')}>{t('portal.act.pause')}</Btn>}
+      {r.status === 'paused' && <Btn onClick={() => act(r.id, 'unpause')}>{t('portal.act.unpause')}</Btn>}
+      {r.verification !== 'verified' && <Btn onClick={() => act(r.id, 'mark_verified')}>{t('portal.act.verify')}</Btn>}
+      {r.status !== 'suspended' && r.status !== 'removed' && <Btn onClick={() => act(r.id, 'suspend')}>{t('portal.act.suspend')}</Btn>}
+    </>
   )
 }
 

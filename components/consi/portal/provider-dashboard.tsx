@@ -41,7 +41,7 @@ export function ProviderDashboard() {
           {t('portal.backToRoles')}
         </Link>
         <p className="text-base font-medium text-muted-foreground">{t('portal.provider.dashboard')}</p>
-        <h1 className="font-heading text-4xl font-bold text-balance">{data.provider.name}</h1>
+        <h1 className="font-heading text-3xl font-bold text-balance sm:text-4xl">{data.provider.name}</h1>
         <p className="text-base">
           {t('portal.provider.orgStatus')}: <strong>{t(`portal.pstatus.${data.provider.status}`)}</strong>
           {data.provider.status === 'pending' && ` — ${t('portal.provider.pendingNote')}`}
@@ -71,7 +71,7 @@ export function ProviderDashboard() {
             return (
               <li key={l.id} className="flex flex-col gap-3 rounded-[1.75rem] bg-card p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
-                  <h3 className="text-xl font-semibold">{l.name}</h3>
+                  <h3 className="min-w-0 text-xl font-semibold text-pretty">{l.name}</h3>
                   <StatusPill status={l.status} />
                 </div>
                 <p className="text-base leading-relaxed text-muted-foreground line-clamp-2">{l.summary}</p>

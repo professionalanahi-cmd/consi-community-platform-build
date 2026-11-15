@@ -113,6 +113,16 @@ export function useDictation(speechLang: string, onFinal: (text: string) => void
     r.lang = speechLang
     r.interimResults = true
     r.continuous = false
+    // In a noisy room (or iOS Safari) the recogniser may never mark a result final. Keep the latest words,
+    // stop once they have not changed for 1.8 s, and submit them on end, so pressing stop never loses the text.
+    let latest = ''
+    let committed = false
+    let settle = 0
+    const commit = () => {
+      if (committed || !latest.trim()) return
+      committed = true
+      finalCb.current(latest.trim())
+    }
     r.onresult = (e) => {
       let text = ''
       let final = false
@@ -120,11 +130,16 @@ export function useDictation(speechLang: string, onFinal: (text: string) => void
         text += e.results[i][0].transcript
         if (e.results[i].isFinal) final = true
       }
+      latest = text
       setInterim(text)
-      if (final) finalCb.current(text.trim())
+      window.clearTimeout(settle)
+      if (final) commit()
+      else settle = window.setTimeout(() => r.stop(), 1800)
     }
     r.onerror = (e) => setError(e.error)
     r.onend = () => {
+      window.clearTimeout(settle)
+      commit()
       setListening(false)
       setInterim('')
     }

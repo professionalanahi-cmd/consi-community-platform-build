@@ -48,14 +48,17 @@ export function CallShell({
   const { t, prefs } = useApp()
   const [text, setText] = useState('')
   const [seconds, setSeconds] = useState(0)
-  const endRef = useRef<HTMLDivElement>(null)
+  const logRef = useRef<HTMLDivElement>(null)
+  const compact = lines.some((l) => l.role === 'user')
 
   useEffect(() => {
     const id = setInterval(() => setSeconds((s) => s + 1), 1000)
     return () => clearInterval(id)
   }, [])
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: prefs.reducedMotion ? 'auto' : 'smooth', block: 'end' })
+    // Scroll only the transcript; scrollIntoView also moved the dialog and the page behind it.
+    const el = logRef.current
+    el?.scrollTo({ top: el.scrollHeight, behavior: prefs.reducedMotion ? 'auto' : 'smooth' })
   }, [lines, prefs.reducedMotion])
 
   const send = () => {
@@ -69,27 +72,45 @@ export function CallShell({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex flex-col items-center gap-1 px-5 pt-6 text-center">
-        <p className="text-base font-semibold text-muted-foreground">{connectionLabel}</p>
-        <h2 id="concierge-title" className="font-heading text-2xl font-bold">
-          {title}
-        </h2>
-      </div>
-
-      <div className="flex flex-col items-center gap-3 py-4">
-        <div className="relative">
-          <div aria-hidden="true" className="absolute -inset-10 rounded-full bg-[radial-gradient(circle,var(--glow)_0%,transparent_70%)] opacity-70" />
-          <Orb size={lines.length ? 120 : 180} state={orbState} className="relative" />
+      {compact ? (
+        // Once the resident has asked something, the conversation gets the screen: one compact header row.
+        <div className="flex shrink-0 items-center gap-3 border-b border-border px-5 pb-3 pt-5">
+          <Orb size={48} state={orbState} />
+          <div className="min-w-0 flex-1">
+            <h2 id="concierge-title" className="truncate font-heading text-lg font-bold">
+              {title}
+            </h2>
+            <p aria-live="polite" className="truncate text-sm font-semibold text-muted-foreground">
+              {statusLabel}
+            </p>
+          </div>
+          <p className="font-heading text-lg font-bold tabular-nums" aria-label={`${mm}:${ss}`}>{`${mm}:${ss}`}</p>
         </div>
-        <p className="font-heading text-3xl font-bold tabular-nums" aria-label={`${mm}:${ss}`}>{`${mm}:${ss}`}</p>
-        <p aria-live="polite" className="text-base font-semibold text-muted-foreground">
-          {statusLabel}
-        </p>
-        {note && <p className="max-w-sm px-5 text-center text-sm text-muted-foreground">{note}</p>}
-      </div>
+      ) : (
+        <>
+          <div className="flex shrink-0 flex-col items-center gap-1 px-5 pt-6 text-center">
+            <p className="text-base font-semibold text-muted-foreground">{connectionLabel}</p>
+            <h2 id="concierge-title" className="font-heading text-2xl font-bold">
+              {title}
+            </h2>
+          </div>
+
+          <div className="flex shrink-0 flex-col items-center gap-2 py-3">
+            <div className="relative">
+              <div aria-hidden="true" className="absolute -inset-8 rounded-full bg-[radial-gradient(circle,var(--glow)_0%,transparent_70%)] opacity-70" />
+              <Orb size={112} state={orbState} className="relative" />
+            </div>
+            <p className="font-heading text-2xl font-bold tabular-nums" aria-label={`${mm}:${ss}`}>{`${mm}:${ss}`}</p>
+            <p aria-live="polite" className="text-base font-semibold text-muted-foreground">
+              {statusLabel}
+            </p>
+            {note && <p className="max-w-sm px-5 text-center text-sm text-muted-foreground">{note}</p>}
+          </div>
+        </>
+      )}
 
       {prefs.captions && (
-        <div className="flex-1 overflow-y-auto px-5" aria-label={t('cc.transcript')} role="log">
+        <div ref={logRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pt-3" aria-label={t('cc.transcript')} role="log">
           <ul className="flex flex-col gap-2 pb-2">
             {lines.map((l) => (
               <li key={l.id} className={cn('flex flex-col gap-2', l.role === 'user' ? 'items-end' : 'items-start')}>
@@ -118,12 +139,11 @@ export function CallShell({
               </li>
             ))}
           </ul>
-          <div ref={endRef} />
         </div>
       )}
       {!prefs.captions && <div className="flex-1" />}
 
-      <div className="flex flex-col gap-4 px-5 pb-6 pt-2">
+      <div className="flex shrink-0 flex-col gap-4 px-5 pb-6 pt-2">
         <form
           onSubmit={(e) => {
             e.preventDefault()

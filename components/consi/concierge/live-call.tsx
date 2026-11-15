@@ -82,6 +82,8 @@ function LiveCallInner({ session, onEnd, onSeeResults, onShowMe }: { session: Se
       onToggleVoice={() => setVoiceOn(!voiceOn)}
       onSend={(text) => {
         setLines((l) => [...l, { id: crypto.randomUUID(), role: 'user', text }])
+        // Typing means the room is too loud to talk: mute the mic so background voices cannot hold the turn open.
+        if (!convo.isMuted) convo.setMuted(true)
         convo.sendUserMessage(text)
       }}
       onEnd={() => {

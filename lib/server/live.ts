@@ -3,7 +3,8 @@ import 'server-only'
 // (https://github.com/endlessriver-og/glendale-concierge-api). The UI keeps calling this app's own
 // /api/* routes in its own shapes; this file fetches from the engine and maps the answers.
 // If the engine is unreachable every caller falls back to the built-in sample engine.
-import type { Category, CostType, DisplayStatus, Lang, Recommendation, Resource, SearchRequest, SearchResponse } from '../types'
+import { translate } from '../i18n'
+import type { Category, CostType, DisplayStatus, EligibilityCheck, FollowUpQuestion, Lang, Recommendation, Resource, SearchRequest, SearchResponse } from '../types'
 import { resolveLocation } from './gis'
 import { db } from './store'
 
@@ -35,6 +36,7 @@ export interface LiveResource {
   originalLang: string
   sourceLabel?: 'public_listing' | 'provider' | 'demo'
   sourceLabelText?: string
+  fit?: { audience?: 'met' | 'confirm' | 'not_met'; cost?: 'met' | 'confirm' | 'not_met' }
 }
 
 const CATEGORY: Record<string, Category[]> = {
@@ -98,7 +100,7 @@ export function toResource(r: LiveResource): Resource {
   }
 }
 
-function toRecommendation(r: LiveResource, i: number): Recommendation {
+function toRecommendation(r: LiveResource, i: number, lang: Lang = 'en', ageGroup?: 'child' | 'teen' | 'adult' | 'senior'): Recommendation {
   const resource = toResource(r)
   // Keep saved items, reminders and tracking working for live records.
   db.resources.set(resource.id, resource)
@@ -110,6 +112,9 @@ function toRecommendation(r: LiveResource, i: number): Recommendation {
     displayStatus: STATUS[r.confidence.status] ?? 'needs_review',
     why: [...new Set(why)],
     eligibility: [
+      // How this listing fits what the resident told us in the follow-up questions.
+      ...(r.fit?.audience && ageGroup ? [{ label: r.audience ? `${translate(lang, `age.${ageGroup}`)}: ${r.audience}` : translate(lang, `age.${ageGroup}`), state: r.fit.audience } satisfies EligibilityCheck] : []),
+      ...(r.fit?.cost ? [{ label: translate(lang, `cost.${COST[r.cost.status] ?? 'unknown'}` as Parameters<typeof translate>[1]), state: r.fit.cost } satisfies EligibilityCheck] : []),
       ...(r.eligibility.summary ? [{ label: r.eligibility.summary, state: 'confirm' as const }] : []),
       ...r.eligibility.unconfirmed.slice(0, 3).map((label) => ({ label, state: 'confirm' as const })),
     ],
@@ -119,7 +124,7 @@ function toRecommendation(r: LiveResource, i: number): Recommendation {
 
 interface LiveSearch {
   searchId: string
-  interpreted: { summary: string; category: string | null }
+  interpreted: { summary: string; category: string | null; ageGroup?: 'child' | 'teen' | 'adult' | 'senior' | null }
   results: LiveResource[]
   hasMore: boolean
   mode: 'ai' | 'keyword' | 'fixture'
@@ -133,21 +138,30 @@ export async function liveSearch(req: SearchRequest): Promise<SearchResponse> {
   const filters: Record<string, unknown> = {}
   if (req.filters.cost === 'free') filters.cost = 'free'
   if (req.filters.cost === 'subsidized') filters.cost = 'low'
+  // Answers to the follow-up questions become the resident's profile for ranking.
+  const a = req.answers
+  const profile = {
+    ...(a.ageGroup && a.ageGroup !== 'skip' ? { ageGroup: a.ageGroup } : {}),
+    ...(a.incomeQualifies === 'yes' ? { lowIncome: true } : a.incomeQualifies === 'no' ? { lowIncome: false } : {}),
+    ...(a.residentOf && a.residentOf !== 'skip' ? { resident: a.residentOf } : {}),
+  }
   const body = {
     query: req.query.trim() || 'community resources',
     lang: req.lang,
     location: { lat: geo.lat, lon: geo.lng },
     ...(Object.keys(filters).length ? { filters } : {}),
+    ...(Object.keys(profile).length ? { profile } : {}),
   }
   const out = await api<LiveSearch>('/api/search', { method: 'POST', body: JSON.stringify(body) })
   if (out.mode === 'fixture') throw new Error('engine returned sample data')
-  let results = out.results.map(toRecommendation)
+  const ageGroup = profile.ageGroup ?? out.interpreted.ageGroup ?? undefined
+  let results = out.results.map((r, i) => toRecommendation(r, i, req.lang, ageGroup))
   if (req.filters.transit) results = results.filter((r) => r.resource.transitNearby)
   if (req.filters.language && req.filters.language !== 'any') results = results.filter((r) => r.resource.languages.includes(req.filters.language as Lang))
   for (const r of results) searchOf.set(r.resource.id, out.searchId)
   return {
     interpretation: { summary: out.interpreted.summary, categories: out.interpreted.category ? (CATEGORY[out.interpreted.category] ?? []) : [], usedAI: out.mode === 'ai' },
-    followUp: null,
+    followUp: nextLiveQuestion(req, results.length, Boolean(out.interpreted.ageGroup)),
     results,
     total: results.length,
     page: 1,
@@ -156,6 +170,45 @@ export async function liveSearch(req: SearchRequest): Promise<SearchResponse> {
     radiusExpanded: false,
     origin: { lat: geo.lat, lng: geo.lng, label: geo.label },
   }
+}
+
+/**
+ * One qualification question at a time, shown above the results (at most two per search).
+ * Results are already on screen; each answer re-ranks them and updates the fit check on every card.
+ */
+function nextLiveQuestion(req: SearchRequest, resultCount: number, ageKnownFromQuery: boolean): FollowUpQuestion | null {
+  if (!resultCount) return null
+  const a = req.answers
+  if (Object.values(a).filter(Boolean).length >= 2) return null
+  const t = (k: Parameters<typeof translate>[1]) => translate(req.lang, k)
+  if (!a.ageGroup && !ageKnownFromQuery) {
+    return { key: 'ageGroup', question: t('fu.ageQ'), why: t('fu.ageWhy'), options: (['child', 'teen', 'adult', 'senior'] as const).map((v) => ({ value: v, label: t(`age.${v}`) })) }
+  }
+  if (!a.incomeQualifies) {
+    return {
+      key: 'incomeQualifies',
+      question: t('fu.incomeQ'),
+      why: t('fu.incomeWhy'),
+      options: [
+        { value: 'yes', label: t('fu.yes') },
+        { value: 'no', label: t('fu.no') },
+        { value: 'skip', label: t('fu.notSure') },
+      ],
+    }
+  }
+  if (!a.residentOf) {
+    return {
+      key: 'residentOf',
+      question: t('fu.residencyQ'),
+      why: t('fu.residencyWhy'),
+      options: [
+        { value: 'glendale', label: t('fu.glendale') },
+        { value: 'la_county', label: t('fu.laCounty') },
+        { value: 'other', label: t('fu.other') },
+      ],
+    }
+  }
+  return null
 }
 
 /** Count a referral in the engine (it feeds the city dashboard). Fire-and-forget. */

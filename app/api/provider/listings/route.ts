@@ -2,13 +2,13 @@ import { z } from 'zod'
 import { data, newId } from '@/lib/server/data'
 import { handle, HttpError } from '@/lib/server/http'
 import { listingInput, toResourceFields } from '@/lib/server/listings'
-import { livePublish, liveProviderListings, liveStats } from '@/lib/server/live'
+import { getProvider, livePublish, liveProviderListings, liveStats } from '@/lib/server/live'
 import { requireRole } from '@/lib/server/session'
 import type { Resource } from '@/lib/types'
 
 export const GET = handle(async () => {
   const { providerId } = await requireRole('provider')
-  const provider = await data.providers.get(providerId!)
+  const provider = await getProvider(providerId)
   if (!provider) throw new HttpError(404, 'Provider not found')
   const owned = (await data.resources.list({ providerId: provider.id })).filter((r) => r.status !== 'removed')
   const stats = await data.activity.statsFor(owned.map((r) => r.id))
@@ -33,7 +33,7 @@ const createSchema = listingInput.extend({ submit: z.boolean().default(false) })
 
 export const POST = handle(async (req: Request) => {
   const { providerId } = await requireRole('provider')
-  const provider = await data.providers.get(providerId!)
+  const provider = await getProvider(providerId)
   if (!provider || provider.status === 'suspended') throw new HttpError(403, 'This organization cannot submit listings')
   const { submit, ...input } = createSchema.parse(await req.json())
   const now = new Date().toISOString()

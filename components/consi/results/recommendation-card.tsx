@@ -39,23 +39,38 @@ export function RecommendationCard({
   const detailsId = `details-${r.id}`
 
   return (
-    <article className="flex flex-col gap-4 rounded-[1.75rem] bg-card p-5 shadow-sm ring-1 ring-border" aria-labelledby={`title-${r.id}`}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <StatusBadge status={rec.displayStatus} />
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          {r.isSample && <span className="rounded-full bg-muted px-2 py-0.5 font-medium">{t('common.sampleData')}</span>}
-          {rec.distanceMiles != null && <span>{t('results.miles', { n: rec.distanceMiles.toFixed(1) })}</span>}
+    <article className="flex flex-col gap-3 rounded-[1.75rem] bg-card p-4 shadow-sm ring-1 ring-border sm:p-5" aria-labelledby={`title-${r.id}`}>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={detailsId}
+        onClick={() => {
+          if (!open) track(r.id, 'view')
+          setOpen(!open)
+        }}
+        className="flex w-full items-start gap-3 text-left"
+      >
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <StatusBadge status={rec.displayStatus} />
+            <span className="rounded-full bg-background px-2 py-0.5 font-medium ring-1 ring-border">{t(`cost.${r.cost}`)}</span>
+            {rec.distanceMiles != null && <span>{t('results.miles', { n: rec.distanceMiles.toFixed(1) })}</span>}
+            {r.isSample && <span className="rounded-full bg-muted px-2 py-0.5 font-medium">{t('common.sampleData')}</span>}
+          </div>
+          <h3 id={`title-${r.id}`} className="font-heading text-lg font-semibold leading-snug text-balance sm:text-xl">
+            <span className="sr-only">{`${index + 1}. `}</span>
+            {rec.display.name}
+          </h3>
+          <p className="text-base text-muted-foreground">{r.organization}</p>
         </div>
-      </div>
+        <span className="mt-1 flex shrink-0 items-center gap-1 text-sm font-semibold text-mint">
+          <span className="sr-only sm:not-sr-only">{open ? t('results.hideDetails') : t('results.details')}</span>
+          <ChevronDown className={cn('size-5 transition-transform', open && 'rotate-180')} aria-hidden="true" />
+        </span>
+      </button>
 
-      <div className="flex flex-col gap-1">
-        <h3 id={`title-${r.id}`} className="font-heading text-xl font-semibold leading-snug text-balance">
-          <span className="sr-only">{`${index + 1}. `}</span>
-          {rec.display.name}
-        </h3>
-        <p className="text-base text-muted-foreground">{r.organization}</p>
-      </div>
-
+      {open && (
+      <div id={detailsId} className="flex flex-col gap-4 border-t border-border pt-4">
       <p className="text-lg leading-relaxed text-pretty">{rec.display.summary}</p>
 
       {!prefs.simplified && rec.why.length > 0 && (
@@ -131,22 +146,7 @@ export function RecommendationCard({
         )}
       </div>
 
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls={detailsId}
-        onClick={() => {
-          if (!open) track(r.id, 'view')
-          setOpen(!open)
-        }}
-        className="flex min-h-11 items-center justify-center gap-2 text-base font-semibold text-mint"
-      >
-        {open ? t('results.hideDetails') : t('results.details')}
-        <ChevronDown className={cn('size-5 transition-transform', open && 'rotate-180')} aria-hidden="true" />
-      </button>
-
-      {open && (
-        <dl id={detailsId} className="grid gap-3 border-t border-border pt-4 text-base">
+        <dl className="grid gap-3 border-t border-border pt-4 text-base">
           <Detail label={t('results.cost')} value={`${t(`cost.${r.cost}`)}${r.costDetail ? ` — ${r.costDetail}` : ''}`} />
           {r.schedule && <Detail label={t('results.schedule')} value={r.schedule} />}
           {r.deadline && <Detail label={t('results.deadline')} value={formatDate(r.deadline, lang)} />}
@@ -164,6 +164,7 @@ export function RecommendationCard({
             </p>
           )}
         </dl>
+      </div>
       )}
     </article>
   )

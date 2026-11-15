@@ -18,7 +18,7 @@ export function PageHeader({ title, backHref, children }: { title: string; backH
         )}
         <LanguageSelector className="ml-auto" />
       </div>
-      <h1 className="font-heading text-3xl font-semibold text-balance">{title}</h1>
+      <h1 className="font-heading text-3xl font-semibold text-balance md:text-4xl">{title}</h1>
       {children}
     </header>
   )

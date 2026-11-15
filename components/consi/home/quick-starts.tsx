@@ -54,7 +54,7 @@ export function QuickStarts() {
         <h2 id="browse-heading" className="text-base font-semibold text-muted-foreground">
           {t('home.browse')}
         </h2>
-        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-2">
           {(Object.keys(CATEGORY_ICONS) as Category[]).map((c) => {
             const Icon = CATEGORY_ICONS[c]
             return (

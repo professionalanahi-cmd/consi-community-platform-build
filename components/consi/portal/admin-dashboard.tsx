@@ -4,8 +4,13 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import useSWR from 'swr'
-import type { Provider, Resource } from '@/lib/types'
+import { LANGUAGE_META, type DictKey } from '@/lib/i18n'
+import { formatDate } from '@/lib/prefs'
+import type { Category, Provider, Resource } from '@/lib/types'
+import { CATEGORIES } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { useApp } from '../app-provider'
+import { FIELD_LABELS } from './listing-form'
 import { NeedRole } from './provider-dashboard'
 import { StatusPill } from './status-pill'
 
@@ -34,14 +39,44 @@ const fetcher = async (url: string) => {
   return d
 }
 
-const TABS = ['Queue', 'Listings', 'Providers', 'Insights'] as const
+const TABS = ['queue', 'listings', 'providers', 'insights'] as const
+
+const INTEGRATION_LABELS: Record<string, DictKey> = {
+  ai: 'portal.int.ai',
+  voice: 'portal.int.voice',
+  gis: 'portal.int.gis',
+  database: 'portal.int.database',
+}
+
+const INTEGRATION_VALUES: Record<string, DictKey> = {
+  live: 'portal.int.live',
+  demo: 'portal.int.demo',
+  'demo (in-memory)': 'portal.int.demoMemory',
+}
+
+const RULE_LABELS: Record<string, DictKey> = {
+  age: 'portal.rule.age',
+  residency: 'portal.rule.residency',
+  res: 'portal.rule.residency',
+  income: 'portal.rule.income',
+  other: 'portal.rule.other',
+}
+
+function useLabels() {
+  const { t } = useApp()
+  const lookup = (map: Record<string, DictKey>, value: string) => (map[value] ? t(map[value]) : value)
+  const category = (value: string) => ((CATEGORIES as readonly string[]).includes(value) ? t(`cat.${value as Category}`) : value)
+  return { lookup, category }
+}
 
 export function AdminDashboard() {
+  const { t } = useApp()
+  const { lookup } = useLabels()
   const { data, error, mutate } = useSWR<Overview>('/api/admin/overview', fetcher)
-  const [tab, setTab] = useState<(typeof TABS)[number]>('Queue')
+  const [tab, setTab] = useState<(typeof TABS)[number]>('queue')
 
   if (error) return <NeedRole />
-  if (!data) return <p className="text-lg text-muted-foreground">Loading…</p>
+  if (!data) return <p className="text-lg text-muted-foreground">{t('common.loading')}</p>
 
   const act = async (id: string, action: string, note?: string) => {
     const res = await fetch(`/api/admin/listings/${id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action, note }) })
@@ -54,40 +89,44 @@ export function AdminDashboard() {
       <div className="flex flex-col gap-3">
         <Link href="/portal" className="inline-flex min-h-11 w-fit items-center gap-2 rounded-full pr-3 text-base font-medium text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-5" aria-hidden="true" />
-          Back to roles
+          {t('portal.backToRoles')}
         </Link>
-        <h1 className="font-heading text-4xl font-bold">Admin</h1>
-        <ul className="flex flex-wrap gap-2" aria-label="Integration status">
+        <h1 className="font-heading text-3xl font-bold text-balance sm:text-4xl">{t('portal.admin.title')}</h1>
+        <ul className="flex flex-wrap gap-2" aria-label={t('portal.admin.integrations')}>
           {Object.entries(data.integrations).map(([k, v]) => (
             <li key={k} className="rounded-full bg-card px-3 py-1 text-sm ring-1 ring-border">
-              <span className="font-semibold capitalize">{k}:</span>{' '}
-              {typeof v === 'string' ? v : Object.entries(v).map(([a, b]) => `${a} ${String(b)}`).join(' · ')}
+              <span className="font-semibold">{lookup(INTEGRATION_LABELS, k)}:</span>{' '}
+              {typeof v === 'string'
+                ? lookup(INTEGRATION_VALUES, v)
+                : Object.entries(v)
+                    .map(([a, b]) => `${a} ${lookup(INTEGRATION_VALUES, String(b))}`)
+                    .join(' · ')}
             </li>
           ))}
         </ul>
       </div>
 
       <div role="tablist" className="flex gap-2 overflow-x-auto">
-        {TABS.map((t) => (
+        {TABS.map((id) => (
           <button
-            key={t}
+            key={id}
             role="tab"
             type="button"
-            aria-selected={tab === t}
-            onClick={() => setTab(t)}
-            className={cn('min-h-11 shrink-0 rounded-full px-5 text-base font-semibold', tab === t ? 'bg-primary text-primary-foreground' : 'bg-card ring-1 ring-border')}
+            aria-selected={tab === id}
+            onClick={() => setTab(id)}
+            className={cn('min-h-11 shrink-0 rounded-full px-5 text-base font-semibold', tab === id ? 'bg-primary text-primary-foreground' : 'bg-card ring-1 ring-border')}
           >
-            {t}
-            {t === 'Queue' && data.queue.length > 0 && ` (${data.queue.length})`}
+            {t(`portal.admin.tab.${id}`)}
+            {id === 'queue' && data.queue.length > 0 && ` (${data.queue.length})`}
           </button>
         ))}
       </div>
 
       <div role="tabpanel">
-        {tab === 'Queue' && <Queue items={data.queue} providers={data.providers} act={act} />}
-        {tab === 'Listings' && <Listings items={data.listings} act={act} />}
-        {tab === 'Providers' && <Providers items={data.providers} onChange={mutate} />}
-        {tab === 'Insights' && <Insights data={data.insights} />}
+        {tab === 'queue' && <Queue items={data.queue} providers={data.providers} act={act} />}
+        {tab === 'listings' && <Listings items={data.listings} act={act} />}
+        {tab === 'providers' && <Providers items={data.providers} onChange={mutate} />}
+        {tab === 'insights' && <Insights data={data.insights} />}
       </div>
     </div>
   )
@@ -96,54 +135,60 @@ export function AdminDashboard() {
 type Act = (id: string, action: string, note?: string) => Promise<void>
 
 function Queue({ items, providers, act }: { items: Resource[]; providers: Provider[]; act: Act }) {
+  const { t, lang } = useApp()
+  const { lookup, category } = useLabels()
   const [notes, setNotes] = useState<Record<string, string>>({})
-  if (!items.length) return <p className="text-lg text-muted-foreground">The queue is empty.</p>
+  if (!items.length) return <p className="text-lg text-muted-foreground">{t('portal.admin.queueEmpty')}</p>
   return (
     <ul className="flex flex-col gap-4">
       {items.map((r) => {
         const p = providers.find((x) => x.id === r.providerId)
+        const dates = [
+          r.startDate && t('portal.admin.starts', { date: formatDate(r.startDate, lang) }),
+          r.deadline && t('portal.admin.deadline', { date: formatDate(r.deadline, lang) }),
+        ].filter(Boolean)
         return (
-          <li key={r.id} className="flex flex-col gap-4 rounded-[1.75rem] bg-card p-6 shadow-sm">
+          <li key={r.id} className="flex flex-col gap-4 rounded-[1.75rem] bg-card p-5 shadow-sm sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h2 className="text-2xl font-semibold">{r.name}</h2>
+              <div className="min-w-0">
+                <h2 className="text-xl font-semibold text-pretty sm:text-2xl">{r.name}</h2>
                 <p className="text-base text-muted-foreground">
                   {r.organization}
-                  {p && ` · provider ${p.status}`}
+                  {p && ` · ${t('portal.admin.providerIs', { status: t(`portal.pstatus.${p.status}`) })}`}
                 </p>
               </div>
               <StatusPill status={r.status} />
             </div>
-            <p className="text-base leading-relaxed">{r.summary}</p>
-            <dl className="grid gap-2 text-base sm:grid-cols-2">
-              <Row k="Address" v={`${r.location.address}, ${r.location.city} ${r.location.zip}`} />
-              <Row k="Cost" v={`${r.cost}${r.costDetail ? ` — ${r.costDetail}` : ''}`} />
-              <Row k="Categories" v={r.categories.join(', ')} />
-              <Row k="Languages" v={r.languages.join(', ')} />
-              <Row k="Contact" v={[r.phone, r.email, r.website].filter(Boolean).join(' · ') || '—'} />
-              <Row k="Dates" v={[r.startDate && `starts ${r.startDate}`, r.deadline && `deadline ${r.deadline}`].filter(Boolean).join(', ') || '—'} />
+            <p className="max-w-3xl text-base leading-relaxed">{r.summary}</p>
+            <dl className="grid gap-x-6 gap-y-2 text-base sm:grid-cols-2 lg:grid-cols-3">
+              <Row k={t('portal.admin.address')} v={`${r.location.address}, ${r.location.city} ${r.location.zip}`} />
+              <Row k={t('portal.form.cost')} v={`${t(`cost.${r.cost}`)}${r.costDetail ? ` — ${r.costDetail}` : ''}`} />
+              <Row k={t('portal.form.categories')} v={r.categories.map(category).join(', ')} />
+              <Row k={t('portal.form.languages')} v={r.languages.map((l) => LANGUAGE_META[l]?.native ?? l).join(', ')} />
+              <Row k={t('portal.admin.contact')} v={[r.phone, r.email, r.website].filter(Boolean).join(' · ') || '—'} />
+              <Row k={t('portal.admin.dates')} v={dates.join(', ') || '—'} />
             </dl>
             {r.uncertainFields?.length ? (
               <p className="rounded-2xl bg-accent p-3 text-base text-accent-foreground">
-                AI flagged as uncertain: <strong>{r.uncertainFields.join(', ')}</strong>
+                {t('portal.admin.uncertain')}: <strong>{r.uncertainFields.map((f) => lookup(FIELD_LABELS, f)).join(', ')}</strong>
               </p>
             ) : null}
             {r.originalFlyer && (
               <details className="rounded-2xl bg-background p-3">
-                <summary className="cursor-pointer text-base font-medium">Original flyer: {r.originalFlyer.name}</summary>
-                <pre className="mt-2 whitespace-pre-wrap font-sans text-sm text-muted-foreground">{r.originalFlyer.text || 'No text captured.'}</pre>
+                <summary className="cursor-pointer text-base font-medium">{t('portal.admin.flyer', { name: r.originalFlyer.name })}</summary>
+                <pre className="mt-2 whitespace-pre-wrap font-sans text-sm text-muted-foreground">{r.originalFlyer.text || t('portal.admin.noFlyerText')}</pre>
               </details>
             )}
             <label className="flex flex-col gap-1">
-              <span className="text-base font-medium">Note to provider (required to reject)</span>
+              <span className="text-base font-medium">{t('portal.admin.note')}</span>
               <textarea rows={2} value={notes[r.id] ?? ''} onChange={(e) => setNotes({ ...notes, [r.id]: e.target.value })} className="rounded-2xl bg-background p-3 text-base ring-1 ring-border" />
             </label>
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={() => act(r.id, 'approve_publish', notes[r.id])} className="min-h-12 rounded-full bg-primary px-6 text-lg font-semibold text-primary-foreground">
-                Approve and publish
+                {t('portal.act.approve')}
               </button>
-              {r.status === 'submitted' && <Btn onClick={() => act(r.id, 'start_review')}>Start review</Btn>}
-              <Btn onClick={() => act(r.id, 'reject', notes[r.id])}>Send back</Btn>
+              {r.status === 'submitted' && <Btn onClick={() => act(r.id, 'start_review')}>{t('portal.act.startReview')}</Btn>}
+              <Btn onClick={() => act(r.id, 'reject', notes[r.id])}>{t('portal.act.sendBack')}</Btn>
             </div>
           </li>
         )
@@ -153,17 +198,49 @@ function Queue({ items, providers, act }: { items: Resource[]; providers: Provid
 }
 
 function Listings({ items, act }: { items: (Resource & { stats: Stats })[]; act: Act }) {
+  const { t } = useApp()
   return (
-    <div className="overflow-x-auto rounded-[1.75rem] bg-card shadow-sm">
+    <>
+    {/* Phones and tablets get one card per listing; the five-column table needs laptop width. */}
+    <ul className="grid gap-4 md:grid-cols-2 lg:hidden">
+      {items.map((r) => (
+        <li key={r.id} className="flex flex-col gap-3 rounded-[1.75rem] bg-card p-5 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold text-pretty">{r.name}</h2>
+              <p className="text-sm text-muted-foreground">
+                {r.organization}
+                {r.isSample && ` · ${t('portal.admin.sample')}`}
+              </p>
+            </div>
+            <StatusPill status={r.status} />
+          </div>
+          <dl className="grid grid-cols-2 gap-3 rounded-2xl bg-background p-3 text-base">
+            <div className="flex flex-col">
+              <dt className="text-sm text-muted-foreground">{t('portal.admin.verification')}</dt>
+              <dd>{t(`portal.verif.${r.verification}`)}</dd>
+            </div>
+            <div className="flex flex-col">
+              <dt className="text-sm text-muted-foreground">{t('portal.admin.funnel')}</dt>
+              <dd className="tabular-nums">{`${r.stats.impressions} / ${r.stats.views} / ${r.stats.referrals}`}</dd>
+            </div>
+          </dl>
+          <div className="flex flex-wrap gap-2">
+            <ListingActions r={r} act={act} />
+          </div>
+        </li>
+      ))}
+    </ul>
+    <div className="hidden overflow-x-auto rounded-[1.75rem] bg-card shadow-sm lg:block">
       <table className="w-full min-w-[720px] text-left text-base">
         <thead className="border-b border-border text-sm text-muted-foreground">
           <tr>
-            <th className="p-4 font-medium">Listing</th>
-            <th className="p-4 font-medium">Status</th>
-            <th className="p-4 font-medium">Verification</th>
-            <th className="p-4 font-medium">Shown / opened / contacted</th>
+            <th className="p-4 font-medium">{t('portal.admin.listing')}</th>
+            <th className="p-4 font-medium">{t('portal.statusLabel')}</th>
+            <th className="p-4 font-medium">{t('portal.admin.verification')}</th>
+            <th className="p-4 font-medium">{t('portal.admin.funnel')}</th>
             <th className="p-4 font-medium">
-              <span className="sr-only">Actions</span>
+              <span className="sr-only">{t('portal.admin.actions')}</span>
             </th>
           </tr>
         </thead>
@@ -174,20 +251,17 @@ function Listings({ items, act }: { items: (Resource & { stats: Stats })[]; act:
                 <p className="font-semibold">{r.name}</p>
                 <p className="text-sm text-muted-foreground">
                   {r.organization}
-                  {r.isSample && ' · sample'}
+                  {r.isSample && ` · ${t('portal.admin.sample')}`}
                 </p>
               </td>
               <td className="p-4">
                 <StatusPill status={r.status} />
               </td>
-              <td className="p-4 capitalize">{r.verification.replace('_', ' ')}</td>
+              <td className="p-4">{t(`portal.verif.${r.verification}`)}</td>
               <td className="p-4 tabular-nums">{`${r.stats.impressions} / ${r.stats.views} / ${r.stats.referrals}`}</td>
               <td className="p-4">
                 <div className="flex flex-wrap justify-end gap-2">
-                  {r.status === 'published' && <Btn onClick={() => act(r.id, 'pause')}>Pause</Btn>}
-                  {r.status === 'paused' && <Btn onClick={() => act(r.id, 'unpause')}>Unpause</Btn>}
-                  {r.verification !== 'verified' && <Btn onClick={() => act(r.id, 'mark_verified')}>Verify</Btn>}
-                  {r.status !== 'suspended' && r.status !== 'removed' && <Btn onClick={() => act(r.id, 'suspend')}>Suspend</Btn>}
+                  <ListingActions r={r} act={act} />
                 </div>
               </td>
             </tr>
@@ -195,10 +269,24 @@ function Listings({ items, act }: { items: (Resource & { stats: Stats })[]; act:
         </tbody>
       </table>
     </div>
+    </>
+  )
+}
+
+function ListingActions({ r, act }: { r: Resource; act: Act }) {
+  const { t } = useApp()
+  return (
+    <>
+      {r.status === 'published' && <Btn onClick={() => act(r.id, 'pause')}>{t('portal.act.pause')}</Btn>}
+      {r.status === 'paused' && <Btn onClick={() => act(r.id, 'unpause')}>{t('portal.act.unpause')}</Btn>}
+      {r.verification !== 'verified' && <Btn onClick={() => act(r.id, 'mark_verified')}>{t('portal.act.verify')}</Btn>}
+      {r.status !== 'suspended' && r.status !== 'removed' && <Btn onClick={() => act(r.id, 'suspend')}>{t('portal.act.suspend')}</Btn>}
+    </>
   )
 }
 
 function Providers({ items, onChange }: { items: Provider[]; onChange: () => void }) {
+  const { t } = useApp()
   const set = async (id: string, status: Provider['status']) => {
     await fetch(`/api/admin/providers/${id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ status }) })
     onChange()
@@ -210,12 +298,12 @@ function Providers({ items, onChange }: { items: Provider[]; onChange: () => voi
           <h2 className="text-xl font-semibold">{p.name}</h2>
           <p className="text-base text-muted-foreground">{p.contactEmail}</p>
           <p className="text-base">
-            Status: <strong className="capitalize">{p.status}</strong>
+            {t('portal.statusLabel')}: <strong>{t(`portal.pstatus.${p.status}`)}</strong>
           </p>
           <div className="flex flex-wrap gap-2">
-            {p.status !== 'verified' && <Btn onClick={() => set(p.id, 'verified')}>Verify</Btn>}
-            {p.status !== 'suspended' && <Btn onClick={() => set(p.id, 'suspended')}>Suspend</Btn>}
-            {p.status === 'suspended' && <Btn onClick={() => set(p.id, 'pending')}>Reinstate</Btn>}
+            {p.status !== 'verified' && <Btn onClick={() => set(p.id, 'verified')}>{t('portal.act.verify')}</Btn>}
+            {p.status !== 'suspended' && <Btn onClick={() => set(p.id, 'suspended')}>{t('portal.act.suspend')}</Btn>}
+            {p.status === 'suspended' && <Btn onClick={() => set(p.id, 'pending')}>{t('portal.act.reinstate')}</Btn>}
           </div>
         </li>
       ))}
@@ -224,10 +312,12 @@ function Providers({ items, onChange }: { items: Provider[]; onChange: () => voi
 }
 
 function Insights({ data }: { data: Overview['insights'] }) {
+  const { t, lang } = useApp()
+  const { lookup, category } = useLabels()
   const max = Math.max(1, ...data.demand.map((d) => d.searches))
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <Panel title={`What residents search for (${data.totalSearches} searches)`}>
+      <Panel title={t('portal.insights.searches', { count: data.totalSearches })}>
         {data.demand.length === 0 ? (
           <Empty />
         ) : (
@@ -235,10 +325,10 @@ function Insights({ data }: { data: Overview['insights'] }) {
             {data.demand.map((d) => (
               <li key={d.category} className="flex flex-col gap-1">
                 <div className="flex justify-between text-base">
-                  <span className="capitalize">{d.category}</span>
+                  <span>{category(d.category)}</span>
                   <span className="tabular-nums text-muted-foreground">
                     {d.searches}
-                    {d.zeroResults > 0 && ` · ${d.zeroResults} with no results`}
+                    {d.zeroResults > 0 && ` · ${t('portal.insights.noResults', { count: d.zeroResults })}`}
                   </span>
                 </div>
                 <div className="h-3 rounded-full bg-muted" aria-hidden="true">
@@ -249,7 +339,7 @@ function Insights({ data }: { data: Overview['insights'] }) {
           </ul>
         )}
       </Panel>
-      <Panel title="Service gaps (few or no matches)">
+      <Panel title={t('portal.insights.gaps')}>
         {data.gaps.length === 0 ? (
           <Empty />
         ) : (
@@ -257,7 +347,9 @@ function Insights({ data }: { data: Overview['insights'] }) {
             {data.gaps.map((g) => (
               <li key={`${g.zip}${g.category}`} className="flex justify-between py-2 text-base">
                 <span>
-                  <span className="capitalize">{g.category}</span> near {g.zip}
+                  {/^\d/.test(g.zip)
+                    ? t('portal.insights.gapNear', { category: category(g.category), zip: g.zip })
+                    : t('portal.insights.gapUnknown', { category: category(g.category) })}
                 </span>
                 <span className="tabular-nums text-muted-foreground">{g.count}</span>
               </li>
@@ -265,21 +357,21 @@ function Insights({ data }: { data: Overview['insights'] }) {
           </ul>
         )}
       </Panel>
-      <Panel title="Eligibility residents could not confirm">
+      <Panel title={t('portal.insights.rules')}>
         {data.unconfirmedRules.length === 0 ? (
           <Empty />
         ) : (
           <ul className="flex flex-col divide-y divide-border">
             {data.unconfirmedRules.map(([rule, n]) => (
               <li key={rule} className="flex justify-between py-2 text-base">
-                <span>{rule}</span>
+                <span>{lookup(RULE_LABELS, rule)}</span>
                 <span className="tabular-nums text-muted-foreground">{n}</span>
               </li>
             ))}
           </ul>
         )}
       </Panel>
-      <Panel title={`Needs re-verification (${data.staleCount})`}>
+      <Panel title={t('portal.insights.stale', { count: data.staleCount })}>
         {data.stale.length === 0 ? (
           <Empty />
         ) : (
@@ -287,13 +379,13 @@ function Insights({ data }: { data: Overview['insights'] }) {
             {data.stale.map((s) => (
               <li key={s.id} className="flex justify-between gap-3 py-2 text-base">
                 <span>{s.name}</span>
-                <span className="shrink-0 text-muted-foreground">{s.lastVerified ? s.lastVerified.slice(0, 10) : 'never'}</span>
+                <span className="shrink-0 text-muted-foreground">{s.lastVerified ? formatDate(s.lastVerified, lang) : t('portal.insights.never')}</span>
               </li>
             ))}
           </ul>
         )}
       </Panel>
-      <Panel title="Shown often, rarely opened">
+      <Panel title={t('portal.insights.lowPerforming')}>
         {data.lowPerforming.length === 0 ? (
           <Empty />
         ) : (
@@ -321,7 +413,8 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
 }
 
 function Empty() {
-  return <p className="text-base text-muted-foreground">No data yet. Run a few resident searches.</p>
+  const { t } = useApp()
+  return <p className="text-base text-muted-foreground">{t('portal.insights.empty')}</p>
 }
 
 function Row({ k, v }: { k: string; v: string }) {

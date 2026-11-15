@@ -1,3 +1,4 @@
+import { PORTAL_DICTIONARIES } from './i18n-portal'
 import type { Lang } from './types'
 
 export const LANGUAGE_META: Record<Lang, { native: string; english: string; speech: string; htmlLang: string }> = {
@@ -342,6 +343,7 @@ const en = {
   'cc.seeResults': 'See these results',
   'cc.hello': 'Hi, I’m CONSI. Tell me what kind of help you are looking for, and I will find programs near you.',
   'cc.guideDone': 'Here it is',
+  ...PORTAL_DICTIONARIES.en,
 }
 
 export type DictKey = keyof typeof en
@@ -666,6 +668,7 @@ const es: Dict = {
   'cc.seeResults': 'Ver estos resultados',
   'cc.hello': 'Hola, soy CONSI. Dígame qué tipo de ayuda busca y encontraré programas cerca de usted.',
   'cc.guideDone': 'Aquí está',
+  ...PORTAL_DICTIONARIES.es,
 }
 
 const hy: Dict = {
@@ -987,6 +990,7 @@ const hy: Dict = {
   'cc.seeResults': 'Տեսնել արդյունքները',
   'cc.hello': 'Բարև, ես CONSI-ն եմ։ Ասեք, թե ինչպիսի օգնություն եք փնտրում, և ես կգտնեմ ծրագրեր ձեր մոտակայքում։',
   'cc.guideDone': 'Ահա այստեղ',
+  ...PORTAL_DICTIONARIES.hy,
 }
 
 const zh: Dict = {
@@ -1308,6 +1312,7 @@ const zh: Dict = {
   'cc.seeResults': '查看这些结果',
   'cc.hello': '您好，我是 CONSI。告诉我您需要什么样的帮助，我会为您找到附近的项目。',
   'cc.guideDone': '在这里',
+  ...PORTAL_DICTIONARIES.zh,
 }
 
 export const DICTIONARIES: Record<Lang, Dict> = { en, es, hy, zh }

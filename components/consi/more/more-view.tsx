@@ -6,6 +6,7 @@ import { useState } from 'react'
 import useSWR from 'swr'
 import { formatDate } from '@/lib/prefs'
 import type { Reminder, Resource } from '@/lib/types'
+import { cn } from '@/lib/utils'
 import { useApp } from '../app-provider'
 import { PageHeader } from '../page-header'
 
@@ -32,26 +33,29 @@ export function MoreView() {
         </span>
         <ChevronRight className="size-6 shrink-0 text-muted-foreground" aria-hidden="true" />
       </Link>
-      <SavedSection />
-      <RemindersSection />
-      <UpdatesSection />
-      <Card icon={LifeBuoy} title={t('more.help')}>
-        <p className="text-base leading-relaxed text-muted-foreground">{t('more.helpDesc')}</p>
-      </Card>
-      <Card icon={Info} title={t('more.about')}>
-        <p className="text-base leading-relaxed text-muted-foreground">{t('more.aboutDesc')}</p>
-      </Card>
-      <Link href="/portal" className="flex min-h-14 items-center gap-3 rounded-[1.75rem] bg-primary px-5 text-lg font-semibold text-primary-foreground">
-        <Building2 className="size-6" aria-hidden="true" />
-        {t('more.portal')}
-      </Link>
+      {/* From tablet width up, the long updates feed takes the second column; the trailing 1fr row absorbs its extra height. */}
+      <div className="grid gap-6 md:grid-cols-2 md:grid-rows-[repeat(5,auto)_1fr] md:items-start">
+        <SavedSection />
+        <RemindersSection />
+        <UpdatesSection className="md:col-start-2 md:row-span-6 md:row-start-1" />
+        <Card icon={LifeBuoy} title={t('more.help')}>
+          <p className="text-base leading-relaxed text-muted-foreground">{t('more.helpDesc')}</p>
+        </Card>
+        <Card icon={Info} title={t('more.about')}>
+          <p className="text-base leading-relaxed text-muted-foreground">{t('more.aboutDesc')}</p>
+        </Card>
+        <Link href="/portal" className="flex min-h-14 items-center gap-3 rounded-[1.75rem] bg-primary px-5 py-3 text-lg font-semibold text-primary-foreground">
+          <Building2 className="size-6 shrink-0" aria-hidden="true" />
+          {t('more.portal')}
+        </Link>
+      </div>
     </div>
   )
 }
 
-function Card({ icon: Icon, title, children }: { icon: typeof Bell; title: string; children: React.ReactNode }) {
+function Card({ icon: Icon, title, children, className }: { icon: typeof Bell; title: string; children: React.ReactNode; className?: string }) {
   return (
-    <section className="flex flex-col gap-3 rounded-[1.75rem] bg-card p-5 shadow-sm">
+    <section className={cn('flex min-w-0 flex-col gap-3 rounded-[1.75rem] bg-card p-5 shadow-sm', className)}>
       <h2 className="flex items-center gap-2 font-heading text-xl font-semibold">
         <Icon className="size-6 text-accent-foreground" aria-hidden="true" />
         {title}
@@ -161,12 +165,12 @@ function RemindersSection() {
   )
 }
 
-function UpdatesSection() {
+function UpdatesSection({ className }: { className?: string }) {
   const { t, lang } = useApp()
   const { data } = useSWR<{ items: { id: string; kind: 'newResource' | 'deadlineSoon' | 'needsReview'; resourceId: string; date: string }[]; resources: Record<string, Resource> }>('/api/updates', fetcher)
   const label = { newResource: t('upd.newResource'), deadlineSoon: t('upd.deadlineSoon'), needsReview: t('upd.needsReview') }
   return (
-    <Card icon={Bell} title={t('more.updates')}>
+    <Card icon={Bell} title={t('more.updates')} className={className}>
       {!data ? (
         <p className="text-muted-foreground">{t('common.loading')}</p>
       ) : data.items.length === 0 ? (

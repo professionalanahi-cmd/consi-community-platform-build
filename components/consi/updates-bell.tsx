@@ -19,7 +19,7 @@ export function UpdatesBell() {
   const { t, lang } = useApp()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
-  const { data } = useSWR<UpdatesResponse>('/api/updates', fetcher)
+  const { data } = useSWR<UpdatesResponse>(`/api/updates?lang=${lang}`, fetcher)
   const count = data?.items.length ?? 0
   const label = { newResource: t('upd.newResource'), deadlineSoon: t('upd.deadlineSoon'), needsReview: t('upd.needsReview') }
 

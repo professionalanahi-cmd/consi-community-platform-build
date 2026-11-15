@@ -2,8 +2,37 @@ import { DEFAULT_PREFS } from '@/lib/prefs'
 import { data } from '@/lib/server/data'
 import { handle } from '@/lib/server/http'
 import { getGuestId } from '@/lib/server/session'
+import { LIVE_API, liveEnabled, toResource, type LiveResource } from '@/lib/server/live'
 
-export const GET = handle(async () => {
+type Item = { id: string; kind: 'newResource' | 'deadlineSoon' | 'needsReview'; resourceId: string; date: string }
+
+/** Real updates from the live engine: listings providers published, and listings whose details may be out of date. */
+async function liveUpdates(lang: string) {
+  const res = await fetch(`${LIVE_API}/api/resources?lang=${encodeURIComponent(lang)}`, { cache: 'no-store', signal: AbortSignal.timeout(6000) })
+  if (!res.ok) throw new Error(`engine updates ${res.status}`)
+  const { resources } = (await res.json()) as { resources: LiveResource[] }
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })
+  const items: Item[] = []
+  for (const r of resources) {
+    if (r.sourceLabel === 'provider') items.push({ id: `new-${r.id}`, kind: 'newResource', resourceId: r.id, date: r.confidence.lastCheckedAt ?? today })
+  }
+  for (const r of resources) {
+    if (r.confidence.status === 'outdated' || r.confidence.status === 'unknown')
+      items.push({ id: `rv-${r.id}`, kind: 'needsReview', resourceId: r.id, date: r.confidence.lastCheckedAt ?? r.confidence.lastVerifiedAt ?? today })
+  }
+  const shown = items.slice(0, 20)
+  const ids = new Set(shown.map((i) => i.resourceId))
+  return { items: shown, resources: Object.fromEntries(resources.filter((r) => ids.has(r.id)).map((r) => [r.id, toResource(r)])) }
+}
+
+export const GET = handle(async (req: Request) => {
+  if (liveEnabled()) {
+    try {
+      return await liveUpdates(new URL(req.url).searchParams.get('lang') ?? 'en')
+    } catch (e) {
+      console.error('[updates] live engine unavailable, using sample updates', e)
+    }
+  }
   const guestId = await getGuestId()
   const [prefs, savedIds] = await Promise.all([data.guests.getPrefs(guestId), data.guests.listSaved(guestId)])
   const notify = (prefs ?? DEFAULT_PREFS).notify

@@ -1,11 +1,11 @@
+import { data } from '@/lib/server/data'
 import { getGuestId } from '@/lib/server/session'
-import { guest } from '@/lib/server/store'
 
 const esc = (s: string) => s.replace(/[\\;,]/g, (m) => `\\${m}`).replace(/\n/g, '\\n')
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params
-  const reminder = guest(await getGuestId()).reminders.find((r) => r.id === id)
+  const reminder = await data.guests.getReminder(await getGuestId(), id)
   if (!reminder) return new Response('Not found', { status: 404 })
   const d = reminder.date.replaceAll('-', '')
   const ics = [

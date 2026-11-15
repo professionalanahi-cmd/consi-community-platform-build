@@ -6,7 +6,7 @@ import 'server-only'
 import { translate } from '../i18n'
 import type { Category, CostType, DisplayStatus, EligibilityCheck, FollowUpQuestion, Lang, Recommendation, Resource, SearchRequest, SearchResponse } from '../types'
 import { resolveLocation } from './gis'
-import { db } from './store'
+import { data } from './data'
 
 export const LIVE_API = (process.env.CONCIERGE_API_URL ?? 'https://glendale-concierge-api.vercel.app').replace(/\/$/, '')
 export const liveEnabled = () => process.env.CONCIERGE_API_URL !== 'off'
@@ -103,7 +103,7 @@ export function toResource(r: LiveResource): Resource {
 function toRecommendation(r: LiveResource, i: number, lang: Lang = 'en', ageGroup?: 'child' | 'teen' | 'adult' | 'senior'): Recommendation {
   const resource = toResource(r)
   // Keep saved items, reminders and tracking working for live records.
-  db.resources.set(resource.id, resource)
+  void data.resources.save(resource).catch(() => {})
   const why = [r.why, r.transit?.label, r.confidence.note, r.nextStep].filter((x): x is string => Boolean(x))
   return {
     resource,

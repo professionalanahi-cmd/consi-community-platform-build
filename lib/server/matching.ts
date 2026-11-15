@@ -16,7 +16,7 @@ import type {
   SearchResponse,
 } from '../types'
 import { distanceMiles, resolveLocation, type GeoPoint } from './gis'
-import { db, publishedResources } from './store'
+import { data } from './data'
 import { liveEnabled, liveSearch } from './live'
 
 export const AI_MODEL = 'google/gemini-3.5-flash'
@@ -242,7 +242,7 @@ async function sampleSearch(req: SearchRequest): Promise<SearchResponse> {
   const ageGroup = req.answers.ageGroup && req.answers.ageGroup !== 'skip' ? req.answers.ageGroup : intent.ageGroup
   const f = req.filters
 
-  const scored = publishedResources()
+  const scored = (await data.resources.list({ status: 'published' }))
     .filter((r) => {
       if (f.cost && f.cost !== 'any' && r.cost !== f.cost) return false
       if (f.ageGroup && f.ageGroup !== 'any' && !r.ageGroups.includes(f.ageGroup)) return false
@@ -297,7 +297,7 @@ async function sampleSearch(req: SearchRequest): Promise<SearchResponse> {
   }))
 
   if (page === 1 && query) {
-    db.searches.push({
+    await data.activity.logSearch({
       categories: intent.categories,
       zip: geo.zip ?? null,
       resultCount: inRange.length,

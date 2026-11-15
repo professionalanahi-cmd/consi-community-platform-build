@@ -5,13 +5,16 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import useSWR from 'swr'
+import { useResourceActions } from '@/hooks/use-resource-actions'
 import { useSpeaker } from '@/hooks/use-speech'
 import { LANGUAGE_META } from '@/lib/i18n'
-import type { Reminder, SearchResponse } from '@/lib/types'
+import type { SearchResponse } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useApp } from '../app-provider'
 import { LanguageSelector } from '../language-selector'
 import { Orb } from '../orb'
+import { AiUpdates } from './ai-updates'
+import { ClearResultsToggle } from './clear-results-toggle'
 import { FiltersPanel } from './filters-panel'
 import { FollowUpCard } from './follow-up-card'
 import { RecommendationCard } from './recommendation-card'
@@ -23,26 +26,31 @@ const postJSON = <T,>(url: string, body: unknown) =>
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error ?? 'Request failed')
     return r.json() as Promise<T>
   })
-const getJSON = (url: string) => fetch(url).then((r) => r.json())
 
 export function ResultsView() {
-  const { t, lang, prefs, search, updateSearch, location } = useApp()
+  const { t, lang, prefs, search, updateSearch, location, resultsReady, takeRestoredResults, clearResults } = useApp()
   const [view, setView] = useState<'list' | 'map'>('list')
   const [refining, setRefining] = useState(false)
   const { speak } = useSpeaker(LANGUAGE_META[lang].speech, prefs.voiceSpeed)
+  const { savedIds, remindedIds, toggleSave, remind } = useResourceActions()
 
   const body = search
-    ? { query: search.query, lang, location, radiusMiles: search.radiusMiles, answers: search.answers, filters: search.filters, page: search.page }
+    ? {
+        query: search.query,
+        lang,
+        location,
+        radiusMiles: search.radiusMiles,
+        answers: search.answers,
+        filters: search.filters,
+        page: search.page,
+        historyId: search.historyId,
+      }
     : null
-  const { data, error, isLoading, mutate } = useSWR<SearchResponse>(body ? ['search', JSON.stringify(body), search?.nonce] : null, () => postJSON('/api/search', body), {
-    keepPreviousData: true,
-    revalidateOnFocus: false,
-  })
-
-  const { data: savedData, mutate: mutateSaved } = useSWR<{ ids: string[] }>('/api/saved', getJSON)
-  const { data: remData, mutate: mutateRem } = useSWR<{ reminders: Reminder[] }>('/api/reminders', getJSON)
-  const savedIds = new Set(savedData?.ids ?? [])
-  const remindedIds = new Set((remData?.reminders ?? []).map((r) => r.resourceId))
+  const { data, error, isLoading, mutate } = useSWR<SearchResponse>(
+    body ? ['search', JSON.stringify(body), search?.nonce] : null,
+    () => takeRestoredResults(body!.historyId) ?? postJSON<SearchResponse>('/api/search', body),
+    { keepPreviousData: true, revalidateOnFocus: false },
+  )
 
   const spokenFor = useRef<string | null>(null)
   useEffect(() => {
@@ -55,6 +63,14 @@ export function ResultsView() {
   }, [data, isLoading, prefs.autoRead, search?.query, search?.nonce, speak])
 
   if (!search) {
+    if (!resultsReady) {
+      return (
+        <div className="flex flex-1 items-center justify-center" aria-busy="true">
+          <Orb size={64} state="thinking" />
+          <span className="sr-only">{t('common.loading')}</span>
+        </div>
+      )
+    }
     return (
       <div className="flex flex-1 flex-col">
         <header className="flex justify-end">
@@ -69,20 +85,6 @@ export function ResultsView() {
         </div>
       </div>
     )
-  }
-
-  const toggleSave = async (id: string) => {
-    const next = savedIds.has(id)
-      ? await fetch(`/api/saved?id=${encodeURIComponent(id)}`, { method: 'DELETE' }).then((r) => r.json())
-      : await postJSON<{ ids: string[] }>('/api/saved', { resourceId: id })
-    mutateSaved(next, { revalidate: false })
-  }
-
-  const remind = async (rec: SearchResponse['results'][number]) => {
-    const r = rec.resource
-    const date = (r.deadline ?? r.startDate)!.slice(0, 10)
-    await postJSON('/api/reminders', { title: rec.display.name, date, kind: r.deadline ? 'deadline' : 'start', resourceId: r.id })
-    mutateRem()
   }
 
   return (
@@ -205,6 +207,10 @@ export function ResultsView() {
           </>
         )}
       </div>
+
+      {data && <AiUpdates watchKey={`${search.historyId ?? ''}-${search.nonce}-${data.results.length}`} />}
+
+      {data && <ClearResultsToggle onConfirm={clearResults} />}
     </div>
   )
 }

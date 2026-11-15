@@ -1,4 +1,4 @@
-import type { Provider, Resource } from './types'
+import type { Category, Provider, Resource } from './types'
 
 /**
  * FICTIONAL SAMPLE RECORDS.
@@ -416,3 +416,30 @@ export const DEMO_ZIP_CENTROIDS: Record<string, { lat: number; lng: number; city
 }
 
 export const DEFAULT_ORIGIN = { lat: 34.1425, lng: -118.2551, label: 'Downtown Glendale' }
+
+/** Sample usage counts per resource: [resourceId, impressions, views, referrals], spread over ~45 days. */
+export const SAMPLE_ACTIVITY: [string, number, number, number][] = [
+  ['res_harmony_youth', 180, 74, 31],
+  ['res_verdugo_guitar', 92, 33, 12],
+  ['res_maple_pantry', 260, 140, 66],
+  ['res_brightpath_utility', 210, 98, 41],
+  ['res_career_launch', 150, 61, 22],
+]
+
+/** Sample anonymous search logs: [categories, zip, resultCount, unconfirmedRules], one every two days. */
+export const SAMPLE_SEARCHES: [Category[], string, number, string[]][] = [
+  [['food'], '91204', 3, []],
+  [['food'], '91205', 3, ['income']],
+  [['utilities'], '91203', 1, ['income', 'res']],
+  [['utilities'], '91201', 1, ['income']],
+  [['arts_music', 'youth_childcare'], '91205', 2, ['res']],
+  [['jobs'], '91204', 1, []],
+  [['housing'], '91206', 0, []],
+  [['housing'], '91201', 0, []],
+  [['health'], '91214', 0, []],
+  [['youth_childcare'], '91204', 2, ['income']],
+  [['transportation', 'seniors'], '91202', 1, ['other']],
+  [['legal', 'housing'], '90041', 1, ['res']],
+  [['food'], '91214', 1, ['income']],
+  [['housing'], '91204', 0, []],
+]

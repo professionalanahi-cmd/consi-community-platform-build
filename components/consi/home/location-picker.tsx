@@ -31,9 +31,11 @@ export function LocationPicker() {
 
   return (
     <div className="flex flex-col gap-3 rounded-3xl bg-card/60 p-4 ring-1 ring-border" data-guide="location">
-      <p className="flex items-center gap-2 text-base text-muted-foreground">
-        <MapPin className="size-5 text-mint" aria-hidden="true" />
-        {t('home.location')} <span className="font-semibold text-foreground">{label}</span>
+      <p className="flex items-start gap-2 text-base text-muted-foreground">
+        <MapPin className="mt-0.5 size-5 shrink-0 text-mint" aria-hidden="true" />
+        <span>
+          {t('home.location')} <span className="font-semibold text-foreground">{label}</span>
+        </span>
       </p>
       <div className="flex flex-wrap gap-2">
         <form

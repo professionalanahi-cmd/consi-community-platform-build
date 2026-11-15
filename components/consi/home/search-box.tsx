@@ -50,7 +50,7 @@ export function SearchBox() {
             }
           }}
           placeholder={t('home.searchPlaceholder')}
-          className="min-h-16 flex-1 resize-none bg-transparent px-3 py-2 text-lg leading-relaxed outline-none placeholder:text-muted-foreground"
+          className="field-sizing-content max-h-48 min-h-16 min-w-0 flex-1 resize-none bg-transparent px-3 py-2 text-lg leading-relaxed outline-none placeholder:text-muted-foreground"
         />
         <button
           type="button"

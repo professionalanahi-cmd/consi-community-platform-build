@@ -3,9 +3,10 @@
 import { AlertTriangle } from 'lucide-react'
 import { SelectField } from '../select-field'
 import { useState } from 'react'
-import { LANGUAGE_META } from '@/lib/i18n'
+import { LANGUAGE_META, type DictKey } from '@/lib/i18n'
 import { CATEGORIES, LANGUAGES } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { useApp } from '../app-provider'
 
 export interface ListingDraft {
   organization: string
@@ -60,10 +61,35 @@ export const EMPTY_DRAFT: ListingDraft = {
   uncertainFields: [],
 }
 
-const AGES = ['child', 'teen', 'adult', 'senior']
+const AGES = ['child', 'teen', 'adult', 'senior'] as const
+
+export const FIELD_LABELS: Record<string, DictKey> = {
+  organization: 'portal.organization',
+  name: 'portal.form.name',
+  summary: 'portal.form.summary',
+  categories: 'portal.form.categories',
+  cost: 'portal.form.cost',
+  costDetail: 'portal.form.costDetail',
+  ageGroups: 'portal.form.ages',
+  eligibilityText: 'portal.form.eligibility',
+  address: 'portal.form.address',
+  city: 'portal.form.city',
+  zip: 'portal.form.zip',
+  phone: 'portal.form.phone',
+  email: 'portal.form.email',
+  website: 'portal.form.website',
+  languages: 'portal.form.languages',
+  availability: 'portal.form.availability',
+  schedule: 'portal.form.schedule',
+  deadline: 'portal.form.deadline',
+  startDate: 'portal.form.startDate',
+  registrationRequired: 'portal.form.registration',
+  transitNearby: 'portal.form.transit',
+}
 const input = 'min-h-12 w-full rounded-2xl bg-background px-4 text-base ring-1 ring-border focus:outline-none focus:ring-2 focus:ring-ring'
 
 export function ListingForm({ initial, onDone, onCancel }: { initial: ListingDraft; onDone: () => void; onCancel: () => void }) {
+  const { t } = useApp()
   const [d, setD] = useState(initial)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -80,7 +106,7 @@ export function ListingForm({ initial, onDone, onCancel }: { initial: ListingDra
       body: JSON.stringify({ ...d, phone: d.phone || undefined, costDetail: d.costDetail || undefined, schedule: d.schedule || undefined, submit }),
     })
     setBusy(false)
-    if (!res.ok) return setError((await res.json()).error ?? 'Please check the highlighted fields')
+    if (!res.ok) return setError((await res.json()).error ?? t('portal.form.error'))
     onDone()
   }
 
@@ -90,121 +116,121 @@ export function ListingForm({ initial, onDone, onCancel }: { initial: ListingDra
         e.preventDefault()
         save(true)
       }}
-      className="flex flex-col gap-6 rounded-[1.75rem] bg-card p-6 shadow-sm"
+      className="flex flex-col gap-6 rounded-[1.75rem] bg-card p-5 shadow-sm sm:p-6"
     >
       <div className="flex flex-col gap-1">
-        <h2 className="font-heading text-2xl font-semibold">Review listing</h2>
+        <h2 className="font-heading text-2xl font-semibold">{t('portal.form.title')}</h2>
         <p className="text-base text-muted-foreground">
           {d.uncertainFields.length
-            ? `CONSI marked ${d.uncertainFields.length} field(s) as missing or unclear. Please confirm them before submitting.`
-            : 'Confirm every detail. An admin reviews it before residents can see it.'}
+            ? t('portal.form.uncertain', { count: d.uncertainFields.length })
+            : t('portal.form.confirm')}
         </p>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
-        <Field flagged={flag('organization')} label="Organization">
+        <Field flagged={flag('organization')} label={t('portal.organization')}>
           <input required className={input} value={d.organization} onChange={(e) => set('organization', e.target.value)} />
         </Field>
-        <Field flagged={flag('name')} label="Program name">
+        <Field flagged={flag('name')} label={t('portal.form.name')}>
           <input required className={input} value={d.name} onChange={(e) => set('name', e.target.value)} />
         </Field>
-        <Field flagged={flag('summary')} label="Plain-language summary" wide>
+        <Field flagged={flag('summary')} label={t('portal.form.summary')} wide>
           <textarea required minLength={10} rows={3} className={cn(input, 'py-3')} value={d.summary} onChange={(e) => set('summary', e.target.value)} />
         </Field>
         <fieldset className="flex flex-col gap-2 md:col-span-2">
-          <legend className="mb-1 text-base font-medium">Categories {flag('categories') && '(check this)'}</legend>
+          <legend className="mb-1 text-base font-medium">{t('portal.form.categories')} {flag('categories') && `(${t('portal.form.checkThis')})`}</legend>
           <div className="flex flex-wrap gap-2">
             {CATEGORIES.map((c) => (
-              <Chip key={c} on={d.categories.includes(c)} onClick={() => toggle('categories', c)} label={c} />
+              <Chip key={c} on={d.categories.includes(c)} onClick={() => toggle('categories', c)} label={t(`cat.${c}`)} />
             ))}
           </div>
         </fieldset>
-        <Field flagged={flag('cost')} label="Cost">
+        <Field flagged={flag('cost')} label={t('portal.form.cost')}>
           <SelectField
-            label="Cost"
+            label={t('portal.form.cost')}
             hideLabel
             value={d.cost}
             onChange={(v) => set('cost', v)}
             options={[
-              { value: 'free', label: 'Free' },
-              { value: 'subsidized', label: 'Subsidized / sliding scale' },
-              { value: 'paid', label: 'Paid' },
+              { value: 'free', label: t('cost.free') },
+              { value: 'subsidized', label: t('portal.form.costSubsidized') },
+              { value: 'paid', label: t('cost.paid') },
             ]}
           />
         </Field>
-        <Field flagged={flag('costDetail')} label="Cost detail (optional)">
+        <Field flagged={flag('costDetail')} label={t('portal.form.costDetail')}>
           <input className={input} value={d.costDetail} onChange={(e) => set('costDetail', e.target.value)} />
         </Field>
         <fieldset className="flex flex-col gap-2">
-          <legend className="mb-1 text-base font-medium">Ages served</legend>
+          <legend className="mb-1 text-base font-medium">{t('portal.form.ages')}</legend>
           <div className="flex flex-wrap gap-2">
             {AGES.map((a) => (
-              <Chip key={a} on={d.ageGroups.includes(a)} onClick={() => toggle('ageGroups', a)} label={a} />
+              <Chip key={a} on={d.ageGroups.includes(a)} onClick={() => toggle('ageGroups', a)} label={t(`portal.age.${a}`)} />
             ))}
           </div>
         </fieldset>
         <fieldset className="flex flex-col gap-2">
-          <legend className="mb-1 text-base font-medium">Languages offered</legend>
+          <legend className="mb-1 text-base font-medium">{t('portal.form.languages')}</legend>
           <div className="flex flex-wrap gap-2">
             {LANGUAGES.map((l) => (
-              <Chip key={l} on={d.languages.includes(l)} onClick={() => toggle('languages', l)} label={LANGUAGE_META[l].english} />
+              <Chip key={l} on={d.languages.includes(l)} onClick={() => toggle('languages', l)} label={LANGUAGE_META[l].native} />
             ))}
           </div>
         </fieldset>
-        <Field flagged={flag('eligibilityText')} label="Who qualifies" wide>
+        <Field flagged={flag('eligibilityText')} label={t('portal.form.eligibility')} wide>
           <textarea rows={2} className={cn(input, 'py-3')} value={d.eligibilityText} onChange={(e) => set('eligibilityText', e.target.value)} />
         </Field>
-        <Field flagged={flag('address')} label="Street address">
+        <Field flagged={flag('address')} label={t('portal.form.address')}>
           <input required className={input} value={d.address} onChange={(e) => set('address', e.target.value)} />
         </Field>
         <div className="grid grid-cols-2 gap-4">
-          <Field flagged={flag('city')} label="City">
+          <Field flagged={flag('city')} label={t('portal.form.city')}>
             <input required className={input} value={d.city} onChange={(e) => set('city', e.target.value)} />
           </Field>
-          <Field flagged={flag('zip')} label="ZIP">
+          <Field flagged={flag('zip')} label={t('portal.form.zip')}>
             <input required pattern="\d{5}" inputMode="numeric" className={input} value={d.zip} onChange={(e) => set('zip', e.target.value)} />
           </Field>
         </div>
-        <Field flagged={flag('phone')} label="Phone">
+        <Field flagged={flag('phone')} label={t('portal.form.phone')}>
           <input type="tel" className={input} value={d.phone} onChange={(e) => set('phone', e.target.value)} />
         </Field>
-        <Field flagged={flag('email')} label="Email">
+        <Field flagged={flag('email')} label={t('portal.form.email')}>
           <input type="email" className={input} value={d.email} onChange={(e) => set('email', e.target.value)} />
         </Field>
-        <Field flagged={flag('website')} label="Website">
+        <Field flagged={flag('website')} label={t('portal.form.website')}>
           <input type="url" placeholder="https://" className={input} value={d.website} onChange={(e) => set('website', e.target.value)} />
         </Field>
-        <Field flagged={flag('schedule')} label="Schedule">
-          <input className={input} placeholder="Tue & Thu, 5–7 PM" value={d.schedule} onChange={(e) => set('schedule', e.target.value)} />
+        <Field flagged={flag('schedule')} label={t('portal.form.schedule')}>
+          <input className={input} placeholder={t('portal.form.schedulePlaceholder')} value={d.schedule} onChange={(e) => set('schedule', e.target.value)} />
         </Field>
-        <Field flagged={flag('availability')} label="Availability">
+        <Field flagged={flag('availability')} label={t('portal.form.availability')}>
           <SelectField
-            label="Availability"
+            label={t('portal.form.availability')}
             hideLabel
             value={d.availability}
             onChange={(v) => set('availability', v)}
             options={[
-              { value: 'open', label: 'Open' },
-              { value: 'waitlist', label: 'Waitlist' },
-              { value: 'seasonal', label: 'Seasonal' },
-              { value: 'closed', label: 'Closed' },
+              { value: 'open', label: t('portal.avail.open') },
+              { value: 'waitlist', label: t('portal.avail.waitlist') },
+              { value: 'seasonal', label: t('portal.avail.seasonal') },
+              { value: 'closed', label: t('portal.avail.closed') },
             ]}
           />
         </Field>
-        <div className="grid grid-cols-2 gap-4">
-          <Field flagged={flag('startDate')} label="Start date">
+        <div className="grid gap-4 min-[30rem]:grid-cols-2">
+          <Field flagged={flag('startDate')} label={t('portal.form.startDate')}>
             <input type="date" className={input} value={d.startDate} onChange={(e) => set('startDate', e.target.value)} />
           </Field>
-          <Field flagged={flag('deadline')} label="Deadline">
+          <Field flagged={flag('deadline')} label={t('portal.form.deadline')}>
             <input type="date" className={input} value={d.deadline} onChange={(e) => set('deadline', e.target.value)} />
           </Field>
         </div>
         <label className="flex min-h-12 items-center gap-3 text-base">
           <input type="checkbox" className="size-5 accent-primary" checked={d.registrationRequired} onChange={(e) => set('registrationRequired', e.target.checked)} />
-          Registration required
+          {t('portal.form.registration')}
         </label>
         <label className="flex min-h-12 items-center gap-3 text-base">
           <input type="checkbox" className="size-5 accent-primary" checked={d.transitNearby} onChange={(e) => set('transitNearby', e.target.checked)} />
-          Near public transit
+          {t('portal.form.transit')}
         </label>
       </div>
       <p role="alert" className="text-base font-medium text-destructive">
@@ -212,13 +238,13 @@ export function ListingForm({ initial, onDone, onCancel }: { initial: ListingDra
       </p>
       <div className="flex flex-wrap gap-3">
         <button type="submit" disabled={busy} className="min-h-12 rounded-full bg-primary px-6 text-lg font-semibold text-primary-foreground disabled:opacity-60">
-          Submit for review
+          {t('portal.act.submit')}
         </button>
         <button type="button" disabled={busy} onClick={() => save(false)} className="min-h-12 rounded-full px-6 text-lg font-semibold ring-1 ring-border hover:bg-muted">
-          Save draft
+          {t('portal.act.saveDraft')}
         </button>
         <button type="button" onClick={onCancel} className="min-h-12 rounded-full px-6 text-lg text-muted-foreground hover:bg-muted">
-          Cancel
+          {t('portal.act.cancel')}
         </button>
       </div>
     </form>
@@ -226,6 +252,7 @@ export function ListingForm({ initial, onDone, onCancel }: { initial: ListingDra
 }
 
 function Field({ flagged, label, children, wide }: { flagged: boolean; label: string; children: React.ReactNode; wide?: boolean }) {
+  const { t } = useApp()
   return (
     <label className={cn('flex flex-col gap-1', wide && 'md:col-span-2')}>
       <span className="flex items-center gap-2 text-base font-medium">
@@ -233,7 +260,7 @@ function Field({ flagged, label, children, wide }: { flagged: boolean; label: st
         {flagged && (
           <span className="inline-flex items-center gap-1 rounded-full bg-accent px-2 text-sm text-accent-foreground">
             <AlertTriangle className="size-3.5" aria-hidden="true" />
-            Check this
+            {t('portal.form.checkThis')}
           </span>
         )}
       </span>
@@ -244,7 +271,7 @@ function Field({ flagged, label, children, wide }: { flagged: boolean; label: st
 
 function Chip({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
   return (
-    <button type="button" aria-pressed={on} onClick={onClick} className={cn('min-h-11 rounded-full px-4 text-base capitalize ring-1', on ? 'bg-primary text-primary-foreground ring-primary' : 'bg-background ring-border')}>
+    <button type="button" aria-pressed={on} onClick={onClick} className={cn('min-h-11 rounded-full px-4 text-base ring-1', on ? 'bg-primary text-primary-foreground ring-primary' : 'bg-background ring-border')}>
       {label}
     </button>
   )

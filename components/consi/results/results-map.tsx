@@ -3,6 +3,7 @@
 import 'leaflet/dist/leaflet.css'
 import { CircleMarker, MapContainer, Popup, TileLayer } from 'react-leaflet'
 import type { Recommendation } from '@/lib/types'
+import { cn } from '@/lib/utils'
 
 const STATUS_COLOR: Record<Recommendation['displayStatus'], string> = {
   verified: '#2f6f6a',
@@ -14,14 +15,16 @@ export default function ResultsMap({
   results,
   origin,
   milesLabel,
+  className,
 }: {
+  className?: string
   results: Recommendation[]
   origin: { lat: number; lng: number; label: string } | null
   milesLabel: (n: number) => string
 }) {
   const center = origin ?? (results[0] ? { lat: results[0].resource.location.lat, lng: results[0].resource.location.lng } : { lat: 34.1425, lng: -118.255 })
   return (
-    <MapContainer center={[center.lat, center.lng]} zoom={13} scrollWheelZoom={false} className="h-[min(24rem,52dvh)] w-full rounded-3xl ring-1 ring-border">
+    <MapContainer center={[center.lat, center.lng]} zoom={13} scrollWheelZoom={false} className={cn('h-[min(24rem,52dvh)] w-full rounded-3xl ring-1 ring-border', className)}>
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

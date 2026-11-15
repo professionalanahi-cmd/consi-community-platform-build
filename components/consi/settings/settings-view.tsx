@@ -20,9 +20,11 @@ export function SettingsView() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title={t('settings.title')} backHref="/">
-        <p className="text-lg leading-relaxed text-muted-foreground text-pretty">{t('settings.intro')}</p>
+        <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground text-pretty">{t('settings.intro')}</p>
       </PageHeader>
 
+      <div className="grid gap-6 md:grid-cols-2 md:items-start">
+      <div className="flex min-w-0 flex-col gap-6">
       <Section title={t('settings.language')} guide="language">
         <p className="text-base text-muted-foreground">{t('settings.languageHint')}</p>
         <Segmented
@@ -63,7 +65,9 @@ export function SettingsView() {
           </span>
         </label>
       </Section>
+      </div>
 
+      <div className="flex min-w-0 flex-col gap-6">
       <Section title={t('settings.location')}>
         <Toggle label={t('settings.deviceLocation')} checked={prefs.useDeviceLocation} onChange={(v) => set({ useDeviceLocation: v })} />
         <SelectField label={t('settings.radius')} value={prefs.defaultRadius} onChange={(v) => set({ defaultRadius: v })} options={[2, 5, 10, 25].map((m) => ({ value: m, label: t('filters.miles', { n: m }) }))} className="[&>label]:text-lg" />
@@ -97,6 +101,8 @@ export function SettingsView() {
           {deleted ? t('settings.deleted') : ''}
         </p>
       </Section>
+      </div>
+      </div>
     </div>
   )
 }

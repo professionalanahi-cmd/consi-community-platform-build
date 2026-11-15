@@ -10,6 +10,7 @@ import { LANGUAGE_META } from '@/lib/i18n'
 import type { Reminder, SearchResponse } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useApp } from '../app-provider'
+import { LanguageSelector } from '../language-selector'
 import { Orb } from '../orb'
 import { FiltersPanel } from './filters-panel'
 import { FollowUpCard } from './follow-up-card'
@@ -55,12 +56,17 @@ export function ResultsView() {
 
   if (!search) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-5 text-center">
-        <Orb size={96} />
-        <h1 className="font-heading text-2xl font-semibold text-balance">{t('results.empty')}</h1>
-        <Link href="/" className="flex min-h-14 items-center rounded-full bg-primary px-6 text-lg font-semibold text-primary-foreground">
-          {t('results.goHome')}
-        </Link>
+      <div className="flex flex-1 flex-col">
+        <header className="flex justify-end">
+          <LanguageSelector />
+        </header>
+        <div className="flex flex-1 flex-col items-center justify-center gap-5 text-center">
+          <Orb size={96} />
+          <h1 className="font-heading text-2xl font-semibold text-balance">{t('results.empty')}</h1>
+          <Link href="/" className="flex min-h-14 items-center rounded-full bg-primary px-6 text-lg font-semibold text-primary-foreground">
+            {t('results.goHome')}
+          </Link>
+        </div>
       </div>
     )
   }
@@ -82,10 +88,13 @@ export function ResultsView() {
   return (
     <div className="flex flex-col gap-5">
       <header className="flex flex-col gap-3">
-        <Link href="/" className="inline-flex min-h-11 w-fit items-center gap-2 rounded-full pr-3 text-base font-medium text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="size-5" aria-hidden="true" />
-          {t('common.back')}
-        </Link>
+        <div className="flex items-center justify-between gap-3">
+          <Link href="/" className="inline-flex min-h-11 w-fit items-center gap-2 rounded-full pr-3 text-base font-medium text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="size-5" aria-hidden="true" />
+            {t('common.back')}
+          </Link>
+          <LanguageSelector />
+        </div>
         <p className="text-base font-medium text-muted-foreground">{t('results.youAsked')}</p>
         <h1 className="font-heading text-2xl font-semibold leading-snug text-balance">{`“${search.query}”`}</h1>
         {data && <p className="text-lg leading-relaxed text-pretty">{data.interpretation.summary}</p>}

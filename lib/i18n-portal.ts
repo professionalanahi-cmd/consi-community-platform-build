@@ -2,6 +2,7 @@ import type { Lang } from './types'
 
 const en = {
   'portal.title': 'CONSI Portal',
+  'portal.badge': 'Portal',
   'portal.residentApp': 'Resident app',
   'portal.backToRoles': 'Back to roles',
   'portal.needRole': 'You need to choose a role first.',
@@ -166,6 +167,7 @@ type PortalDict = Record<keyof typeof en, string>
 
 const es: PortalDict = {
   'portal.title': 'Portal CONSI',
+  'portal.badge': 'Portal',
   'portal.residentApp': 'App para residentes',
   'portal.backToRoles': 'Volver a los roles',
   'portal.needRole': 'Primero debe elegir un rol.',
@@ -328,6 +330,7 @@ const es: PortalDict = {
 
 const hy: PortalDict = {
   'portal.title': 'CONSI պորտալ',
+  'portal.badge': 'Պորտալ',
   'portal.residentApp': 'Բնակիչների հավելված',
   'portal.backToRoles': 'Վերադառնալ դերերին',
   'portal.needRole': 'Նախ պետք է դեր ընտրեք։',
@@ -490,6 +493,7 @@ const hy: PortalDict = {
 
 const zh: PortalDict = {
   'portal.title': 'CONSI 门户',
+  'portal.badge': '门户',
   'portal.residentApp': '居民应用',
   'portal.backToRoles': '返回角色选择',
   'portal.needRole': '请先选择一个角色。',

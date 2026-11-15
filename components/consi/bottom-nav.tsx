@@ -24,7 +24,7 @@ export function BottomNav() {
       aria-label={t('nav.main')}
       className="sticky bottom-0 z-30 order-last border-t border-border bg-background/95 backdrop-blur lg:static lg:z-auto lg:order-none lg:w-60 lg:shrink-0 lg:border-r lg:border-t-0 lg:bg-transparent lg:backdrop-blur-none xl:w-64"
     >
-      <ul className="mx-auto flex max-w-xl items-stretch justify-around gap-0.5 px-1.5 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 md:max-w-2xl lg:sticky lg:top-6 lg:mx-0 lg:max-w-none lg:flex-col lg:justify-start lg:gap-1.5 lg:p-4 xl:top-8 xl:p-5">
+      <ul className="mx-auto flex max-w-xl items-stretch justify-around gap-0.5 px-1.5 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 md:max-w-2xl lg:sticky lg:top-20 lg:mx-0 lg:max-w-none lg:flex-col lg:justify-start lg:gap-1.5 lg:p-4 xl:p-5">
         {/* Rendered twice so tab order always matches what is on screen: first in the rail, centered in the bar. */}
         <TalkItem className="hidden lg:mb-3 lg:flex" />
         {ITEMS.map(({ href, key, icon: Icon, guide }, i) => {

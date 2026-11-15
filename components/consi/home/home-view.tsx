@@ -2,7 +2,6 @@
 
 import { AudioLines } from 'lucide-react'
 import { useApp } from '../app-provider'
-import { LanguageSelector } from '../language-selector'
 import { Orb } from '../orb'
 import { LocationPicker } from './location-picker'
 import { QuickStarts } from './quick-starts'
@@ -12,10 +11,6 @@ export function HomeView() {
   const { t, setConciergeOpen } = useApp()
   return (
     <div className="flex flex-col gap-8 md:grid md:grid-cols-2 xl:items-start xl:gap-x-12">
-      <div className="-mb-4 flex justify-end md:col-span-2">
-        <LanguageSelector />
-      </div>
-
       {/* One stacked column on phones, a shared grid on tablets, and two side-by-side columns on wide screens. */}
       <div className="contents xl:flex xl:flex-col xl:gap-8">
         <header className="flex flex-col items-center gap-4 text-center md:col-span-2">

@@ -10,13 +10,12 @@ import { LANGUAGE_META } from '@/lib/i18n'
 import type { Reminder, SearchResponse } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useApp } from '../app-provider'
-import { LanguageSelector } from '../language-selector'
 import { Orb } from '../orb'
 import { FiltersPanel } from './filters-panel'
 import { FollowUpCard } from './follow-up-card'
 import { RecommendationCard } from './recommendation-card'
 
-const MAP_SIZE = 'h-[min(24rem,52dvh)] md:h-[min(30rem,52dvh)] lg:h-[calc(100dvh-9rem)] lg:max-h-[46rem]'
+const MAP_SIZE = 'h-[min(24rem,52dvh)] md:h-[min(30rem,52dvh)] lg:h-[calc(100dvh-13rem)] lg:max-h-[46rem]'
 
 const ResultsMap = dynamic(() => import('./results-map'), { ssr: false, loading: () => <div className={cn(MAP_SIZE, 'animate-pulse rounded-3xl bg-muted')} /> })
 
@@ -58,17 +57,12 @@ export function ResultsView() {
 
   if (!search) {
     return (
-      <div className="flex flex-1 flex-col">
-        <header className="flex justify-end">
-          <LanguageSelector />
-        </header>
-        <div className="flex flex-1 flex-col items-center justify-center gap-5 text-center">
-          <Orb size={96} />
-          <h1 className="font-heading text-2xl font-semibold text-balance">{t('results.empty')}</h1>
-          <Link href="/" className="flex min-h-14 items-center rounded-full bg-primary px-6 text-lg font-semibold text-primary-foreground">
-            {t('results.goHome')}
-          </Link>
-        </div>
+      <div className="flex flex-1 flex-col items-center justify-center gap-5 text-center">
+        <Orb size={96} />
+        <h1 className="font-heading text-2xl font-semibold text-balance">{t('results.empty')}</h1>
+        <Link href="/" className="flex min-h-14 items-center rounded-full bg-primary px-6 text-lg font-semibold text-primary-foreground">
+          {t('results.goHome')}
+        </Link>
       </div>
     )
   }
@@ -90,13 +84,10 @@ export function ResultsView() {
   return (
     <div className="flex flex-col gap-5">
       <header className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-3">
-          <Link href="/" className="inline-flex min-h-11 w-fit items-center gap-2 rounded-full pr-3 text-base font-medium text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="size-5" aria-hidden="true" />
-            {t('common.back')}
-          </Link>
-          <LanguageSelector />
-        </div>
+        <Link href="/" className="inline-flex min-h-11 w-fit items-center gap-2 rounded-full pr-3 text-base font-medium text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="size-5" aria-hidden="true" />
+          {t('common.back')}
+        </Link>
         <p className="text-base font-medium text-muted-foreground">{t('results.youAsked')}</p>
         <h1 className="max-w-3xl font-heading text-2xl font-semibold leading-snug text-balance md:text-3xl md:leading-snug">{`“${search.query}”`}</h1>
         {data && <p className="max-w-3xl text-lg leading-relaxed text-pretty">{data.interpretation.summary}</p>}
@@ -175,7 +166,7 @@ export function ResultsView() {
                 {/* Wide screens: cards flow in two columns, or sit beside a map that stays in view while the list scrolls. */}
                 <div className={cn('flex flex-col gap-4', view === 'map' && 'lg:grid lg:grid-cols-2 lg:items-start lg:gap-6')}>
                   {view === 'map' && (
-                    <div className="isolate flex flex-col gap-2 lg:sticky lg:top-8">
+                    <div className="isolate flex flex-col gap-2 lg:sticky lg:top-24">
                       <ResultsMap className={MAP_SIZE} results={data.results} origin={data.origin} milesLabel={(n) => t('results.miles', { n: n.toFixed(1) })} />
                       <p className="text-sm text-muted-foreground">{t('results.mapList')}</p>
                     </div>

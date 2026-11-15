@@ -1,13 +1,13 @@
 'use client'
 
-import { Play } from 'lucide-react'
 import Link from 'next/link'
 import { useApp } from '../app-provider'
 import { PageHeader } from '../page-header'
 
 export function DemoView() {
   const { t } = useApp()
-  const steps = [t('demo.c1'), t('demo.c2'), t('demo.c3'), t('demo.c4'), t('demo.c5')]
+  // Only the chapters the recorded video actually shows.
+  const steps = [t('demo.c1'), t('demo.c2'), t('demo.c3')]
 
   return (
     <div className="flex flex-col gap-6">
@@ -16,17 +16,18 @@ export function DemoView() {
       </PageHeader>
 
       <figure className="flex flex-col gap-3">
-        <div
-          role="img"
-          aria-label={t('demo.placeholder')}
-          className="flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-[1.75rem] bg-foreground text-background shadow-sm"
+        {/* Screen recording of the real app, with burned-in English captions. No sound. */}
+        <video
+          controls
+          playsInline
+          muted
+          preload="metadata"
+          poster="/demo/consi-demo-poster.jpg"
+          aria-label={t('more.demo')}
+          className="aspect-video w-full rounded-[1.75rem] bg-foreground shadow-sm"
         >
-          <span className="flex size-16 items-center justify-center rounded-full bg-background/15" aria-hidden="true">
-            <Play className="size-7 translate-x-0.5" />
-          </span>
-          <span className="font-heading text-xl font-semibold">{t('demo.placeholder')}</span>
-        </div>
-        <figcaption className="text-base leading-relaxed text-muted-foreground text-pretty">{t('demo.placeholderDesc')}</figcaption>
+          <source src="/demo/consi-demo.mp4" type="video/mp4" />
+        </video>
       </figure>
 
       <ol className="flex flex-col gap-3 rounded-[1.75rem] bg-card p-5 shadow-sm">
@@ -39,8 +40,6 @@ export function DemoView() {
           </li>
         ))}
       </ol>
-
-      <p className="text-base leading-relaxed text-muted-foreground text-pretty">{t('demo.captions')}</p>
 
       <Link href="/" className="flex min-h-14 items-center justify-center rounded-full bg-primary px-6 text-lg font-semibold text-primary-foreground">
         {t('demo.tryIt')}

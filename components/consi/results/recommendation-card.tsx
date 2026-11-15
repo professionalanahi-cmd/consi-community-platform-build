@@ -127,6 +127,7 @@ export function RecommendationCard({
           type="button"
           onClick={onToggleSave}
           aria-pressed={saved}
+          data-sound={saved ? 'off' : 'success'}
           data-guide={index === 0 ? 'save' : undefined}
           className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-background px-4 text-base font-semibold ring-1 ring-border hover:bg-muted"
         >
@@ -138,6 +139,7 @@ export function RecommendationCard({
             type="button"
             onClick={onRemind}
             disabled={reminded}
+            data-sound="success"
             className="col-span-2 flex min-h-12 items-center justify-center gap-2 rounded-full bg-accent px-4 text-base font-semibold text-accent-foreground disabled:opacity-70"
           >
             {reminded ? <BellRing className="size-5" aria-hidden="true" /> : <Bell className="size-5" aria-hidden="true" />}

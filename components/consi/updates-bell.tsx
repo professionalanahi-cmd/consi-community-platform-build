@@ -44,6 +44,7 @@ export function UpdatesBell() {
         aria-label={count ? `${t('more.updates')} (${count})` : t('more.updates')}
         aria-expanded={open}
         aria-controls="updates-panel"
+        data-sound={open ? 'tap' : 'notify'}
         onClick={() => setOpen(!open)}
         className="relative flex size-11 items-center justify-center rounded-full bg-card ring-1 ring-border hover:bg-muted"
       >

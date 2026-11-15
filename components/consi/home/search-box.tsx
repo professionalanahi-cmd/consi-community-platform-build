@@ -56,6 +56,7 @@ export function SearchBox() {
           type="button"
           onClick={dictation.listening ? dictation.stop : dictation.start}
           aria-pressed={dictation.listening}
+          data-sound="none"
           aria-label={dictation.listening ? t('home.dictating') : t('home.dictate')}
           className={cn(
             'flex size-14 shrink-0 items-center justify-center rounded-full transition-colors',

@@ -8,6 +8,7 @@ import useSWR from 'swr'
 import { useResourceActions } from '@/hooks/use-resource-actions'
 import { useSpeaker } from '@/hooks/use-speech'
 import { LANGUAGE_META } from '@/lib/i18n'
+import { playSound } from '@/lib/sounds'
 import type { SearchResponse } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useApp } from '../app-provider'
@@ -62,6 +63,19 @@ export function ResultsView() {
     const names = data.results.slice(0, 3).map((r) => r.display.name).join('. ')
     speak(`${data.interpretation.summary}. ${names}`)
   }, [data, isLoading, prefs.autoRead, search?.query, search?.nonce, speak])
+
+  // Only a search that finishes while this page is open makes a sound, not results already on screen.
+  const wasLoading = useRef(false)
+  useEffect(() => {
+    if (isLoading) {
+      wasLoading.current = true
+      return
+    }
+    if (!wasLoading.current) return
+    wasLoading.current = false
+    if (error) playSound('error')
+    else if (data) playSound(data.results.length ? 'results' : 'empty')
+  }, [isLoading, data, error])
 
   if (!search) {
     if (!resultsReady) {

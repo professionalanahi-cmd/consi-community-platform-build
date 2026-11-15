@@ -10,6 +10,7 @@ export const DEFAULT_PREFS: Preferences = {
   voiceEnabled: true,
   voiceSpeed: 1,
   autoRead: false,
+  soundEffects: true,
   useDeviceLocation: false,
   defaultRadius: 5,
   savedLocations: [],

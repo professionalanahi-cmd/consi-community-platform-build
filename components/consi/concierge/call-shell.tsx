@@ -68,7 +68,8 @@ export function CallShell({
   const ss = String(seconds % 60).padStart(2, '0')
 
   return (
-    <div className="flex h-full flex-col">
+    // The microphone is live during a call, so the controls stay silent rather than being picked up as speech.
+    <div className="flex h-full flex-col" data-sound="none">
       <div className="flex flex-col items-center gap-1 px-5 pt-6 text-center">
         <p className="text-base font-semibold text-muted-foreground">{connectionLabel}</p>
         <h2 id="concierge-title" className="font-heading text-2xl font-bold">

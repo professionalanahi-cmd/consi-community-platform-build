@@ -15,6 +15,7 @@ const schema = z.object({
   voiceEnabled: z.boolean(),
   voiceSpeed: z.number().min(0.6).max(1.4),
   autoRead: z.boolean(),
+  soundEffects: z.boolean().default(DEFAULT_PREFS.soundEffects),
   useDeviceLocation: z.boolean(),
   defaultRadius: z.number().min(1).max(25),
   savedLocations: z.array(z.object({ label: z.enum(['home', 'work', 'school']), zip: z.string().regex(/^\d{5}$/) })).max(3),
@@ -31,7 +32,7 @@ const schema = z.object({
 
 export const GET = handle(async () => {
   const prefs = await data.guests.getPrefs(await getGuestId())
-  return { prefs: prefs ?? DEFAULT_PREFS, stored: Boolean(prefs) }
+  return { prefs: { ...DEFAULT_PREFS, ...prefs }, stored: Boolean(prefs) }
 })
 
 export const PUT = handle(async (req: Request) => {

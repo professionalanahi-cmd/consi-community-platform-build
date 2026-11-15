@@ -159,6 +159,7 @@ export interface Preferences {
   voiceEnabled: boolean
   voiceSpeed: number
   autoRead: boolean
+  soundEffects: boolean
   useDeviceLocation: boolean
   defaultRadius: number
   savedLocations: SavedLocation[]

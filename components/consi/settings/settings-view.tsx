@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { LANGUAGE_META } from '@/lib/i18n'
+import { playSound, setSoundEnabled } from '@/lib/sounds'
 import { LANGUAGES, type Preferences } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useApp } from '../app-provider'
@@ -56,6 +57,16 @@ export function SettingsView() {
       <Section title={t('settings.voice')} guide="voice-settings">
         <Toggle label={t('settings.voiceEnabled')} checked={prefs.voiceEnabled} onChange={(v) => set({ voiceEnabled: v })} />
         <Toggle label={t('settings.autoRead')} checked={prefs.autoRead} onChange={(v) => set({ autoRead: v })} />
+        <Toggle
+          label={t('settings.soundEffects')}
+          hint={t('settings.soundEffectsHint')}
+          checked={prefs.soundEffects}
+          onChange={(v) => {
+            setSoundEnabled(v)
+            if (v) playSound('on')
+            set({ soundEffects: v })
+          }}
+        />
         <label className="flex flex-col gap-2">
           <span className="text-lg font-semibold">{t('settings.voiceSpeed')}</span>
           <input type="range" min={0.6} max={1.4} step={0.1} value={prefs.voiceSpeed} onChange={(e) => set({ voiceSpeed: Number(e.target.value) })} className="h-11 accent-primary" />

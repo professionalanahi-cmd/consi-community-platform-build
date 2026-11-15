@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import useSWR, { useSWRConfig } from 'swr'
 import { detectLanguage, LANGUAGE_META, translate, type DictKey } from '@/lib/i18n'
 import { DEFAULT_PREFS } from '@/lib/prefs'
+import { playSound, setSoundEnabled, soundForClick, unlockSound } from '@/lib/sounds'
 import type { Lang, Preferences, SearchAnswers, SearchFilters, SearchHistoryEntry, SearchResponse } from '@/lib/types'
 
 export type LocationInput = { zip?: string; lat?: number; lng?: number; label?: string } | null
@@ -53,7 +54,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [location, setLocationState] = useState<LocationInput>(null)
   const [search, setSearch] = useState<SearchState | null>(null)
   const [guide, setGuideState] = useState<string | null>(null)
-  const [conciergeOpen, setConciergeOpen] = useState(false)
+  const [conciergeOpen, setConciergeOpenState] = useState(false)
+  const conciergeOpenRef = useRef(false)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const guideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hydrated = useRef(false)
@@ -99,7 +101,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (data?.prefs && !hydrated.current) {
       hydrated.current = true
-      setPrefs(data.prefs)
+      setPrefs({ ...DEFAULT_PREFS, ...data.prefs })
       const home = data.prefs.savedLocations.find((l) => l.label === 'home')
       if (home) setLocationState((cur) => cur ?? { zip: home.zip, label: home.zip })
     }
@@ -114,6 +116,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     root.dataset.contrast = prefs.highContrast ? 'high' : 'normal'
     root.dataset.motion = prefs.reducedMotion ? 'reduced' : 'normal'
   }, [lang, prefs.textSize, prefs.highContrast, prefs.reducedMotion])
+
+  useEffect(() => {
+    setSoundEnabled(prefs.soundEffects)
+  }, [prefs.soundEffects])
+
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      const sound = soundForClick(e.target)
+      if (!sound) return
+      unlockSound()
+      // Deferred so a handler that plays its own sound for this click (search, concierge) takes priority.
+      setTimeout(() => playSound(sound), 0)
+    }
+    window.addEventListener('click', onClick, true)
+    return () => window.removeEventListener('click', onClick, true)
+  }, [])
+
+  const setConciergeOpen = useCallback((open: boolean) => {
+    if (conciergeOpenRef.current === open) return
+    conciergeOpenRef.current = open
+    playSound(open ? 'open' : 'close')
+    setConciergeOpenState(open)
+  }, [])
 
   const updatePrefs = useCallback(
     (patch: Partial<Preferences>) => {
@@ -145,6 +170,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const startSearch = useCallback(
     (query: string, extra?: Partial<SearchState>) => {
+      playSound('search')
       setSearch((cur) => ({
         query,
         answers: prefs.consentSaveInfo && cur ? cur.answers : {},
@@ -199,7 +225,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       conciergeOpen,
       setConciergeOpen,
     }),
-    [prefs, updatePrefs, resetPrefs, lang, t, location, search, startSearch, updateSearch, resultsReady, takeRestoredResults, clearResults, guide, setGuide, conciergeOpen],
+    [prefs, updatePrefs, resetPrefs, lang, t, location, search, startSearch, updateSearch, resultsReady, takeRestoredResults, clearResults, guide, setGuide, conciergeOpen, setConciergeOpen],
   )
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>

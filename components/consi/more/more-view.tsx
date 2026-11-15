@@ -33,11 +33,9 @@ export function MoreView() {
         </span>
         <ChevronRight className="size-6 shrink-0 text-muted-foreground" aria-hidden="true" />
       </Link>
-      {/* From tablet width up, the long updates feed takes the second column; the trailing 1fr row absorbs its extra height. */}
-      <div className="grid gap-6 md:grid-cols-2 md:grid-rows-[repeat(5,auto)_1fr] md:items-start">
+      <div className="grid gap-6 md:grid-cols-2 md:items-start">
         <SavedSection />
         <RemindersSection />
-        <UpdatesSection className="md:col-start-2 md:row-span-6 md:row-start-1" />
         <Card icon={LifeBuoy} title={t('more.help')}>
           <p className="text-base leading-relaxed text-muted-foreground">{t('more.helpDesc')}</p>
         </Card>
@@ -165,30 +163,3 @@ function RemindersSection() {
   )
 }
 
-function UpdatesSection({ className }: { className?: string }) {
-  const { t, lang } = useApp()
-  const { data } = useSWR<{ items: { id: string; kind: 'newResource' | 'deadlineSoon' | 'needsReview'; resourceId: string; date: string }[]; resources: Record<string, Resource> }>('/api/updates', fetcher)
-  const label = { newResource: t('upd.newResource'), deadlineSoon: t('upd.deadlineSoon'), needsReview: t('upd.needsReview') }
-  return (
-    <Card icon={Bell} title={t('more.updates')} className={className}>
-      {!data ? (
-        <p className="text-muted-foreground">{t('common.loading')}</p>
-      ) : data.items.length === 0 ? (
-        <p className="text-base text-muted-foreground">{t('upd.empty')}</p>
-      ) : (
-        <ul className="flex flex-col divide-y divide-border">
-          {data.items.map((i) => {
-            const r = data.resources[i.resourceId]
-            return (
-              <li key={i.id} className="flex flex-col py-3">
-                <span className="text-sm font-semibold text-accent-foreground">{label[i.kind]}</span>
-                <span className="text-lg">{r?.translations[lang]?.name ?? r?.name}</span>
-                <span className="text-sm text-muted-foreground">{formatDate(i.date, lang)}</span>
-              </li>
-            )
-          })}
-        </ul>
-      )}
-    </Card>
-  )
-}

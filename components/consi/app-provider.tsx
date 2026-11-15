@@ -1,10 +1,10 @@
 'use client'
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import useSWR from 'swr'
+import useSWR, { useSWRConfig } from 'swr'
 import { detectLanguage, LANGUAGE_META, translate, type DictKey } from '@/lib/i18n'
 import { DEFAULT_PREFS } from '@/lib/prefs'
-import type { Lang, Preferences, SearchAnswers, SearchFilters } from '@/lib/types'
+import type { Lang, Preferences, SearchAnswers, SearchFilters, SearchHistoryEntry, SearchResponse } from '@/lib/types'
 
 export type LocationInput = { zip?: string; lat?: number; lng?: number; label?: string } | null
 
@@ -16,6 +16,8 @@ export interface SearchState {
   page: number
   /** Bumps to force a fresh search for the same query. */
   nonce: number
+  /** History entry this search session writes to. */
+  historyId: string
 }
 
 interface AppContextValue {
@@ -29,6 +31,11 @@ interface AppContextValue {
   search: SearchState | null
   startSearch: (query: string, extra?: Partial<SearchState>) => void
   updateSearch: (patch: Partial<SearchState>) => void
+  /** False until the last active results have been restored from the server. */
+  resultsReady: boolean
+  /** Returns the stored snapshot once for a restored search so it is shown without searching again. */
+  takeRestoredResults: (historyId: string) => SearchResponse | null
+  clearResults: () => Promise<void>
   guide: string | null
   setGuide: (target: string | null) => void
   conciergeOpen: boolean
@@ -50,6 +57,40 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const guideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hydrated = useRef(false)
+  const { mutate: globalMutate } = useSWRConfig()
+  const { data: activeData } = useSWR<{ entry: SearchHistoryEntry | null }>('/api/history/active', fetcher, {
+    revalidateOnFocus: false,
+    revalidateIfStale: false,
+  })
+  const [resultsReady, setResultsReady] = useState(false)
+  const restoredResults = useRef<{ historyId: string; response: SearchResponse } | null>(null)
+  const searchRef = useRef(search)
+  searchRef.current = search
+
+  useEffect(() => {
+    if (!activeData || resultsReady) return
+    const entry = activeData.entry
+    if (entry && !searchRef.current) {
+      restoredResults.current = { historyId: entry.id, response: entry.response }
+      setSearch({ ...entry.criteria, page: entry.page, nonce: 0, historyId: entry.id })
+      if (entry.criteria.location) setLocationState(entry.criteria.location)
+    }
+    setResultsReady(true)
+  }, [activeData, resultsReady])
+
+  const takeRestoredResults = useCallback((historyId: string) => {
+    const snap = restoredResults.current
+    if (!snap || snap.historyId !== historyId) return null
+    restoredResults.current = null
+    return snap.response
+  }, [])
+
+  const clearResults = useCallback(async () => {
+    await fetch('/api/history/active', { method: 'DELETE' })
+    restoredResults.current = null
+    setSearch(null)
+    globalMutate('/api/history/active', { entry: null }, { revalidate: false })
+  }, [globalMutate])
 
   useEffect(() => {
     setDetected(detectLanguage(navigator.languages ?? [navigator.language]))
@@ -112,6 +153,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         page: 1,
         nonce: (cur?.nonce ?? 0) + 1,
         ...extra,
+        historyId: crypto.randomUUID(),
       }))
     },
     [prefs.consentSaveInfo, prefs.defaultRadius],
@@ -149,12 +191,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       search,
       startSearch,
       updateSearch,
+      resultsReady,
+      takeRestoredResults,
+      clearResults,
       guide,
       setGuide,
       conciergeOpen,
       setConciergeOpen,
     }),
-    [prefs, updatePrefs, resetPrefs, lang, t, location, search, startSearch, updateSearch, guide, setGuide, conciergeOpen],
+    [prefs, updatePrefs, resetPrefs, lang, t, location, search, startSearch, updateSearch, resultsReady, takeRestoredResults, clearResults, guide, setGuide, conciergeOpen],
   )
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>

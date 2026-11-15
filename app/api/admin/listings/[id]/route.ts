@@ -1,9 +1,10 @@
 import { z } from 'zod'
 import { handle, HttpError } from '@/lib/server/http'
+import { recordListingStatus, recordPublish } from '@/lib/server/changes'
 import { autoTranslate } from '@/lib/server/listings'
 import { livePublish } from '@/lib/server/live'
 import { requireRole } from '@/lib/server/session'
-import { db, logReview } from '@/lib/server/store'
+import { data } from '@/lib/server/data'
 import type { ListingStatus } from '@/lib/types'
 
 const schema = z.object({
@@ -23,11 +24,13 @@ const NEXT: Partial<Record<z.infer<typeof schema>['action'], ListingStatus>> = {
 export const PATCH = handle(async (req: Request, ctx: { params: Promise<{ id: string }> }) => {
   await requireRole('admin')
   const { id } = await ctx.params
-  const r = db.resources.get(id)
+  const r = await data.resources.get(id)
   if (!r) throw new HttpError(404, 'Listing not found')
   const { action, note } = schema.parse(await req.json())
   if (action === 'reject' && !note?.trim()) throw new HttpError(400, 'Add a note so the provider knows what to change')
   const now = new Date().toISOString()
+  const wasPublished = r.status === 'published'
+  const wasPaused = r.status === 'paused'
 
   if (action === 'approve_publish') {
     r.status = 'published'
@@ -36,9 +39,9 @@ export const PATCH = handle(async (req: Request, ctx: { params: Promise<{ id: st
     r.source = 'Provider submission, verified by CONSI admin'
     r.translations = await autoTranslate(r).catch(() => r.translations)
     // Publish into the live engine too, so residents find it in search in any language.
-    if (!db.reviews.some((v) => v.resourceId === id && v.action === 'published_live')) {
+    if (!(await data.reviews.listForResource(id)).some((v) => v.action === 'published_live')) {
       const liveId = await livePublish(r)
-      if (liveId) logReview(id, 'admin', 'published_live', liveId)
+      if (liveId) await data.reviews.log(id, 'admin', 'published_live', liveId)
     }
   } else if (action === 'mark_verified') {
     r.verification = 'verified'
@@ -52,6 +55,11 @@ export const PATCH = handle(async (req: Request, ctx: { params: Promise<{ id: st
   }
   if (note) r.reviewNotes = note
   r.updatedAt = now
-  logReview(id, 'admin', action, note)
+  await data.resources.save(r)
+  if (action === 'approve_publish') await recordPublish(r)
+  else if (wasPublished && (action === 'pause' || action === 'suspend' || action === 'remove'))
+    await recordListingStatus(r, 'listed', action === 'pause' ? 'paused' : 'removed', 'CONSI admin review')
+  else if (action === 'unpause' && wasPaused) await recordListingStatus(r, 'paused', 'listed', 'CONSI admin review')
+  await data.reviews.log(id, 'admin', action, note)
   return { listing: r }
 })

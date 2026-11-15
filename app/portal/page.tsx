@@ -1,9 +1,9 @@
 import { RoleChooser } from '@/components/consi/portal/role-chooser'
-import { db } from '@/lib/server/store'
+import { data } from '@/lib/server/data'
 
 export const dynamic = 'force-dynamic'
 
-export default function Page() {
-  const providers = [...db.providers.values()].map((p) => ({ id: p.id, name: p.name, status: p.status }))
+export default async function Page() {
+  const providers = (await data.providers.list()).map((p) => ({ id: p.id, name: p.name, status: p.status }))
   return <RoleChooser providers={providers} />
 }

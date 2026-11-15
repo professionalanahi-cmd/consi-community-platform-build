@@ -1,21 +1,41 @@
 'use client'
 
+import { useMemo } from 'react'
 import { AudioLines } from 'lucide-react'
 import { useApp } from '../app-provider'
+import { LanguageSelector } from '../language-selector'
 import { Orb } from '../orb'
 import { LocationPicker } from './location-picker'
 import { QuickStarts } from './quick-starts'
+import { useRotatingWord } from '@/hooks/use-rotating-word'
+import { cn } from '@/lib/utils'
 import { SearchBox } from './search-box'
 
 export function HomeView() {
   const { t, setConciergeOpen } = useApp()
+  const wordList = t('home.promptWords')
+  const words = useMemo(() => wordList.split('|'), [wordList])
+  const { word, motionClass } = useRotatingWord(words)
   return (
     <div className="flex flex-col gap-8">
-      <header className="flex flex-col items-center gap-4 pt-4 text-center">
+      <header className="flex flex-col items-center gap-4 text-center">
+        <LanguageSelector className="self-end" />
         <Orb size={112} />
         <div className="flex flex-col gap-2">
           <p className="text-lg font-medium text-muted-foreground">{t('home.greeting')}</p>
-          <h1 className="font-heading text-3xl font-semibold leading-tight text-balance">{t('home.prompt')}</h1>
+          <h1
+            aria-label={t('home.prompt')}
+            className="font-heading text-3xl font-semibold leading-tight text-balance"
+          >
+            {t('home.promptBefore')}{' '}
+            <span
+              data-hero-word
+              className={cn('inline-block text-accent-foreground motion-reduce:transition-none', motionClass)}
+            >
+              {word}
+            </span>{' '}
+            {t('home.promptAfter')}
+          </h1>
         </div>
       </header>
 

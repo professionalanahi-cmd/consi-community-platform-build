@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { DEFAULT_PREFS } from '@/lib/prefs'
 import { handle } from '@/lib/server/http'
 import { getGuestId } from '@/lib/server/session'
-import { db, guest } from '@/lib/server/store'
+import { data } from '@/lib/server/data'
 import { LANGUAGES } from '@/lib/types'
 
 const schema = z.object({
@@ -30,19 +30,17 @@ const schema = z.object({
 })
 
 export const GET = handle(async () => {
-  const g = guest(await getGuestId())
-  return { prefs: g.prefs ?? DEFAULT_PREFS, stored: Boolean(g.prefs) }
+  const prefs = await data.guests.getPrefs(await getGuestId())
+  return { prefs: prefs ?? DEFAULT_PREFS, stored: Boolean(prefs) }
 })
 
 export const PUT = handle(async (req: Request) => {
-  const prefs = schema.parse(await req.json())
-  const g = guest(await getGuestId())
-  g.prefs = prefs
+  const prefs = await data.guests.setPrefs(await getGuestId(), schema.parse(await req.json()))
   return { prefs, stored: true }
 })
 
 /** "Delete my data": removes everything tied to this guest. */
 export const DELETE = handle(async () => {
-  db.guests.delete(await getGuestId())
+  await data.guests.deleteAll(await getGuestId())
   return { prefs: DEFAULT_PREFS, stored: false }
 })

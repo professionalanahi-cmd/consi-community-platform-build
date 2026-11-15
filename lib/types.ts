@@ -232,3 +232,64 @@ export interface SearchResponse {
   radiusExpanded: boolean
   origin: { lat: number; lng: number; label: string } | null
 }
+
+export type SearchCriteria = Pick<SearchRequest, 'query' | 'location' | 'radiusMiles' | 'answers' | 'filters'>
+
+/** A completed search and the exact results it produced, kept independently of the active Results tab. */
+export interface SearchHistoryEntry {
+  id: string
+  createdAt: string
+  updatedAt: string
+  criteria: SearchCriteria
+  page: number
+  total: number
+  response: SearchResponse
+}
+
+export type SearchHistorySummary = Omit<SearchHistoryEntry, 'response'>
+
+export type ResourceChangeKind = 'new_resource' | 'eligibility' | 'availability' | 'contact' | 'schedule' | 'deadline'
+
+/** A field value copied from the listing record. Dates are YYYY-MM-DD; availability and status are tokens. */
+export interface ChangedField {
+  field: 'eligibility' | 'availability' | 'status' | 'phone' | 'email' | 'website' | 'address' | 'schedule' | 'deadline' | 'startDate'
+  before: string | null
+  after: string | null
+}
+
+/** A recorded change to a published listing. Only written when a listing actually changes, never seeded. */
+export interface ResourceChange {
+  id: string
+  resourceId: string
+  kind: ResourceChangeKind
+  fields: ChangedField[]
+  source: string
+  at: string
+}
+
+export type ResultUpdateKind = ResourceChangeKind | 'deadline_soon' | 'enrollment_soon'
+
+export interface ResultUpdate {
+  id: string
+  kind: ResultUpdateKind
+  resourceId: string
+  resourceName: string
+  organization: string
+  date: string
+  /** Verified facts from the listing record. These, not the AI summary, are the source of truth. */
+  facts: ChangedField[]
+  /** Plain-language rewording of `facts`, or null when AI was unavailable or its output failed checks. */
+  aiSummary: string | null
+  source: { label: string; url: string | null }
+  verification: VerificationState
+  lastVerified: string | null
+  /** False for new programs that match the search but were not in the original results. */
+  inResults: boolean
+}
+
+export interface ResultUpdatesResponse {
+  enabled: boolean
+  hasActiveResults: boolean
+  items: ResultUpdate[]
+  checkedAt: string
+}

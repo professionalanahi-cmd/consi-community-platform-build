@@ -4,6 +4,7 @@ import 'server-only'
 // /api/* routes in its own shapes; this file fetches from the engine and maps the answers.
 // If the engine is unreachable every caller falls back to the built-in sample engine.
 import { translate } from '../i18n'
+import type { Provider } from '../types'
 import type { Category, CostType, DisplayStatus, EligibilityCheck, FollowUpQuestion, Lang, Recommendation, Resource, SearchRequest, SearchResponse } from '../types'
 import { resolveLocation } from './gis'
 import { data } from './data'
@@ -361,4 +362,41 @@ export async function liveProviderListings(org: string, providerId: string) {
     console.error('[live] provider listings failed', e)
     return []
   }
+}
+
+interface LiveOrg { id: string; name: string; contactEmail: string | null; website: string | null; status: 'pending' | 'verified' | 'suspended'; createdAt: string }
+const toProvider = (o: LiveOrg): Provider => ({ id: o.id, name: o.name, contactEmail: o.contactEmail ?? '', website: o.website ?? undefined, status: o.status, isSample: false, createdAt: o.createdAt })
+
+/**
+ * Organizations registered through the portal are kept in the engine's database, so they survive server restarts.
+ * This copies them into this app's data layer; call it before reading providers.
+ */
+export async function hydrateOrgs(): Promise<void> {
+  const token = process.env.CONCIERGE_ADMIN_TOKEN
+  if (!liveEnabled() || !token) return
+  try {
+    const out = await api<{ organizations: LiveOrg[] }>('/api/admin/orgs', { headers: { 'x-admin-token': token } }, 6000)
+    for (const o of out.organizations) if (!(await data.providers.get(o.id))) await data.providers.save(toProvider(o))
+  } catch (e) {
+    console.error('[live] org list failed', e)
+  }
+}
+
+/** Register a new organization (or return the existing one with the same name). */
+export async function liveRegisterOrg(input: { name: string; contactEmail?: string; website?: string }): Promise<Provider | null> {
+  const token = process.env.CONCIERGE_ADMIN_TOKEN
+  if (!liveEnabled() || !token) return null
+  const out = await api<{ organization: LiveOrg }>('/api/admin/orgs', { method: 'POST', body: JSON.stringify(input), headers: { 'x-admin-token': token } }, 8000)
+  const p = toProvider(out.organization)
+  await data.providers.save(p)
+  return p
+}
+
+/** A provider by id, re-reading the engine's registry if this server instance has not seen it yet. */
+export async function getProvider(id: string | null | undefined): Promise<Provider | null> {
+  if (!id) return null
+  const found = await data.providers.get(id)
+  if (found) return found
+  await hydrateOrgs()
+  return data.providers.get(id)
 }

@@ -56,7 +56,12 @@ export const POST = handle(async (req: Request) => {
   // status Potential) so residents can find it right away in any language.
   if (submit) {
     const liveId = await livePublish(resource)
-    if (liveId) await data.reviews.log(resource.id, 'provider', 'published_live', liveId)
+    if (liveId) {
+      await data.reviews.log(resource.id, 'provider', 'published_live', liveId)
+      // It is live for residents now, so the dashboard should say so.
+      resource.status = 'published'
+      await data.resources.save(resource)
+    }
   }
   return { listing: resource }
 })
